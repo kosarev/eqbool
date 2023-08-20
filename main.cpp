@@ -12,6 +12,20 @@
 
 #include "eqbool.h"
 
+[[noreturn]] static void fatal(const char *msg) {
+    std::cerr << "error: " << msg << std::endl;
+    std::exit(EXIT_FAILURE);
+}
+
+static void process_test_lines() {
+    std::string line;
+    while(std::getline(std::cin, line))
+        std::cout << line << "\n";
+
+    if(!std::cin.eof())
+        fatal("cannot read input");
+}
+
 int main() {
-    std::cout << "eqbool foo(): " << eqbool::foo() << "\n";
+    process_test_lines();
 }
