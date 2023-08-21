@@ -9,6 +9,7 @@
 */
 
 #include <iostream>
+#include <sstream>
 
 #include "eqbool.h"
 
@@ -17,10 +18,30 @@
     std::exit(EXIT_FAILURE);
 }
 
+static void process_new_term(unsigned term) {
+    std::cout << "new term: " << term << "\n";
+}
+
+static void process_test_line(const std::string &line) {
+    std::istringstream s(line);
+    char op;
+    if(!(s >> op))
+        fatal("operator missed");
+    if(op == '.') {
+        unsigned term;
+        if(!(s >> term))
+            fatal("term missed");
+        process_new_term(term);
+        return;
+    }
+
+    fatal("unknown operator");
+}
+
 static void process_test_lines() {
     std::string line;
     while(std::getline(std::cin, line))
-        std::cout << line << "\n";
+        process_test_line(line);
 
     if(!std::cin.eof())
         fatal("cannot read input");
