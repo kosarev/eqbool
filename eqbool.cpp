@@ -19,6 +19,8 @@ eqbool eqbool_context::get(const char *term) {
 eqbool eqbool_context::get_or(args_ref args) {
     if(args.empty())
         return eqfalse;
+    if(args.size() == 1)
+        return args[0];
 
     // TODO
     assert(0);

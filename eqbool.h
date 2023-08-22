@@ -58,14 +58,14 @@ private:
     size_t xsize = 0;
 
 public:
-    args_ref() = default;
-
     args_ref(const std::vector<eqbool> &args)
         : ptr(args.data()), xsize(args.size()) {}
 
     const eqbool *data() const { return ptr; }
     size_t size() const { return xsize; }
     bool empty() const { return size() == 0; }
+
+    eqbool operator [] (size_t i) const {  return ptr[i]; }
 };
 
 class eqbool_context {
