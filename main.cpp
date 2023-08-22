@@ -104,7 +104,8 @@ public:
         std::string line;
         while(std::getline(std::cin, line)) {
             std::cout << std::to_string(line_no) << ": " << line << "\n";
-            process_test_line(line);
+            if(!line.empty())
+                process_test_line(line);
         }
 
         if(!std::cin.eof())

@@ -19,8 +19,11 @@ eqbool eqbool_context::get(const char *term) {
 eqbool eqbool_context::get_or(args_ref args) {
     std::vector<eqbool> selected_args;
     for(eqbool a : args) {
-        if(!a.is_false())
-            selected_args.push_back(a);
+        if(a.is_false())
+            continue;
+        if(a.is_true())
+            return eqtrue;
+        selected_args.push_back(a);
     }
 
     if(selected_args.empty())
