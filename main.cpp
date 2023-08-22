@@ -26,7 +26,7 @@ using eqbool::eqbool;
 
 class test_context {
 private:
-    eqbool_context context;
+    eqbool_context eqbools;
     std::vector<eqbool> nodes;
     unsigned line_no = 0;
 
@@ -38,7 +38,7 @@ private:
         size_t expected_term = nodes.size();
         if(term != expected_term)
             fatal("expected term " + std::to_string(expected_term));
-        nodes.push_back(context.get(std::to_string(term).c_str()));
+        nodes.push_back(eqbools.get(std::to_string(term).c_str()));
     }
 
     void process_test_line(const std::string &line) {
@@ -59,6 +59,11 @@ private:
     }
 
 public:
+    test_context() {
+        nodes.push_back(eqbools.get_false());
+        nodes.push_back(eqbools.get_true());
+    }
+
     void process_test_lines() {
         std::string line;
         while(std::getline(std::cin, line))

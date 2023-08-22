@@ -25,7 +25,14 @@ private:
 };
 
 class eqbool_context {
+private:
+    eqbool eqfalse{"0"};
+    eqbool eqtrue{"1"};
+
 public:
+    eqbool get_false() /* no const */ { return eqfalse; }
+    eqbool get_true() /* no const */ { return eqtrue; }
+
     eqbool get(const char *term);
 };
 
