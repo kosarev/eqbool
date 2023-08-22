@@ -55,25 +55,30 @@ private:
         }
 
         unsigned r = 0;
+        if(!(s >> r))
+            fatal("result node expected");
+
+        std::vector<eqbool> args;
+        unsigned a;
+        while(s >> a)
+            args.push_back(get_node(a));
+        if(!s.eof())
+            fatal("unexpected arguments");
+
         eqbool e;
         if(op == '.') {
-            if(!(s >> r))
-                fatal("term missed");
+            if(args.size() != 0)
+                fatal("no arguments expected");
             e = eqbools.get(std::to_string(r).c_str());
         } else if(op == '|') {
-            if(!(s >> r))
-                fatal("result node expected");
-            std::vector<eqbool> args;
-            unsigned a;
-            while(s >> a)
-                args.push_back(get_node(a));
             e = eqbools.get_or(args);
+        } else if(op == '~') {
+            if(args.size() != 1)
+                fatal("one argument expected");
+            e = ~args[0];
         } else {
             fatal("unknown operator");
         }
-
-        if(!s.eof())
-            fatal("unexpected arguments");
 
         if(assert) {
             if(get_node(r) != e)
