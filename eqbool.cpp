@@ -42,6 +42,14 @@ eqbool eqbool_context::get_and(args_ref args) {
     return ~get_or(or_args);
 }
 
+eqbool eqbool_context::ifelse(eqbool i, eqbool t, eqbool e) {
+    if(i.is_const())
+        return i.is_true() ? t : e;
+
+    // TODO
+    assert(0);
+}
+
 eqbool eqbool_context::invert(eqbool e) {
     if(e.is_const())
         return e.is_false() ? eqtrue : eqfalse;

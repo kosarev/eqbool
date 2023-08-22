@@ -85,6 +85,8 @@ public:
     eqbool get_or(args_ref args);
     eqbool get_and(args_ref args);
 
+    eqbool ifelse(eqbool i, eqbool t, eqbool e);
+
     eqbool invert(eqbool e);
 
     friend class eqbool;
