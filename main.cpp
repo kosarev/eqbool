@@ -34,28 +34,42 @@ private:
         ::fatal(std::to_string(line_no) + ": " + msg);
     }
 
-    void add_term(unsigned term) {
-        size_t expected_term = nodes.size();
-        if(term != expected_term)
-            fatal("expected term " + std::to_string(expected_term));
-        nodes.push_back(eqbools.get(std::to_string(term).c_str()));
-    }
-
     void process_test_line(const std::string &line) {
         ++line_no;
         std::istringstream s(line);
         char op;
         if(!(s >> op))
             fatal("operator missed");
+
+        bool assert = false;
+        if(op == '!') {
+            if(!(s >> op))
+                fatal("assertion operator missed");
+            assert = true;
+        }
+
+        unsigned r = 0;
+        eqbool e;
         if(op == '.') {
-            unsigned term;
-            if(!(s >> term))
+            if(!(s >> r))
                 fatal("term missed");
-            add_term(term);
+            e = eqbools.get(std::to_string(r).c_str());
+        } else {
+            fatal("unknown operator");
+        }
+
+        if(assert) {
+            if(r >= nodes.size())
+                fatal("undefined result node");
+            if(nodes[r] != e)
+                fatal("nodes do not match");
             return;
         }
 
-        fatal("unknown operator");
+        size_t expected_r = nodes.size();
+        if(r != expected_r)
+            fatal("expected result node " + std::to_string(expected_r));
+        nodes.push_back(e);
     }
 
 public:

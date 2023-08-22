@@ -22,6 +22,13 @@ private:
     eqbool(const char *term) : term(term) {}
 
     friend class eqbool_context;
+
+public:
+    eqbool() {}
+
+    bool operator != (const eqbool &other) const {
+        return term != other.term;
+    }
 };
 
 class eqbool_context {
