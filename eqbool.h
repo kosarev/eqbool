@@ -79,14 +79,13 @@ private:
 public:
     eqbool get_false() /* no const */ { return eqfalse; }
     eqbool get_true() /* no const */ { return eqtrue; }
-
+    eqbool get(bool b) { return b ? get_true() : get_false(); }
     eqbool get(const char *term);
 
     eqbool get_or(args_ref args);
     eqbool get_and(args_ref args);
-
+    eqbool get_eq(eqbool a, eqbool b);
     eqbool ifelse(eqbool i, eqbool t, eqbool e);
-
     eqbool invert(eqbool e);
 
     friend class eqbool;

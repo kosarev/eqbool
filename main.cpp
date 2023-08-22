@@ -73,6 +73,10 @@ private:
             e = eqbools.get_or(args);
         } else if(op == '&') {
             e = eqbools.get_and(args);
+        } else if(op == '=') {
+            if(args.size() != 2)
+                fatal("2 arguments expected");
+            e = eqbools.get_eq(args[0], args[1]);
         } else if(op == '?') {
             if(args.size() != 3)
                 fatal("3 arguments expected");
