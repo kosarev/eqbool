@@ -8,6 +8,7 @@
     Published under the MIT license.
 */
 
+#include <fstream>
 #include <iostream>
 #include <sstream>
 #include <vector>
@@ -107,23 +108,29 @@ public:
         nodes.push_back(eqbools.get_true());
     }
 
-    void process_test_lines() {
+    void process_test_lines(std::istream &f) {
         std::string line;
-        while(std::getline(std::cin, line)) {
+        while(std::getline(f, line)) {
             ++line_no;
             std::cout << std::to_string(line_no) << ": " << line << "\n";
             if(!line.empty())
                 process_test_line(line);
         }
 
-        if(!std::cin.eof())
+        if(!f.eof())
             fatal("cannot read input");
     }
 };
 
 }  // anonymous namespace
 
-int main() {
+int main(int argc, const char **argv) {
     test_context c;
-    c.process_test_lines();
+    for(int i = 1; i != argc; ++i) {
+        std::string path = argv[i];
+        std::ifstream f(path);
+        if(!f)
+            fatal("cannot open " + path);
+        c.process_test_lines(f);
+    }
 }

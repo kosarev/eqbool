@@ -58,3 +58,5 @@ append_if(ERROR_LIMIT_FLAG "-ferror-limit=1" CMAKE_CXX_FLAGS)
 append_if(G_FLAG "-g" CMAKE_CXX_FLAGS)
 
 add_executable(eqbool main.cpp eqbool.cpp)
+
+add_subdirectory(tests)
