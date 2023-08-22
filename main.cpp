@@ -41,7 +41,6 @@ private:
     }
 
     void process_test_line(const std::string &line) {
-        ++line_no;
         std::istringstream s(line);
         char op;
         if(!(s >> op))
@@ -103,6 +102,7 @@ public:
     void process_test_lines() {
         std::string line;
         while(std::getline(std::cin, line)) {
+            ++line_no;
             std::cout << std::to_string(line_no) << ": " << line << "\n";
             if(!line.empty())
                 process_test_line(line);
