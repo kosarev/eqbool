@@ -30,8 +30,14 @@ private:
     std::vector<eqbool> nodes;
     unsigned line_no = 0;
 
-    [[noreturn]] void fatal(std::string msg) {
+    [[noreturn]] void fatal(std::string msg) const {
         ::fatal(std::to_string(line_no) + ": " + msg);
+    }
+
+    eqbool get_node(unsigned i) const {
+        if(i >= nodes.size())
+            fatal("undefined node");
+        return nodes[i];
     }
 
     void process_test_line(const std::string &line) {
@@ -39,12 +45,12 @@ private:
         std::istringstream s(line);
         char op;
         if(!(s >> op))
-            fatal("operator missed");
+            fatal("operator expected");
 
         bool assert = false;
         if(op == '!') {
             if(!(s >> op))
-                fatal("assertion operator missed");
+                fatal("assertion operator expected");
             assert = true;
         }
 
@@ -54,21 +60,30 @@ private:
             if(!(s >> r))
                 fatal("term missed");
             e = eqbools.get(std::to_string(r).c_str());
+        } else if(op == '|') {
+            if(!(s >> r))
+                fatal("result node expected");
+            std::vector<eqbool> args;
+            unsigned a;
+            while(s >> a)
+                args.push_back(get_node(a));
+            e = eqbools.get_or(args);
         } else {
             fatal("unknown operator");
         }
 
+        if(!s.eof())
+            fatal("unexpected arguments");
+
         if(assert) {
-            if(r >= nodes.size())
-                fatal("undefined result node");
-            if(nodes[r] != e)
+            if(get_node(r) != e)
                 fatal("nodes do not match");
             return;
         }
 
         size_t expected_r = nodes.size();
         if(r != expected_r)
-            fatal("expected result node " + std::to_string(expected_r));
+            fatal("result node " + std::to_string(expected_r) + "expected");
         nodes.push_back(e);
     }
 
