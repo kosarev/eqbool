@@ -62,8 +62,7 @@ eqbool eqbool_context::invert(eqbool e) {
     if(e.is_const())
         return get(!e.is_true());
 
-    // TODO
-    assert(0);
+    return eqbool({e}, *this);
 }
 
 }  // namesapce eqbool

@@ -12,20 +12,25 @@
 #define EQBOOL_H
 
 #include <cassert>
+#include <initializer_list>
 #include <string>
 #include <vector>
 
 namespace eqbool {
 
+class args_ref;
 class eqbool_context;
 
 class eqbool {
 private:
     eqbool_context *context = nullptr;
     std::string term;
+    std::vector<eqbool> ops;
 
     eqbool(const char *term, eqbool_context &context)
         : context(&context), term(term) {}
+
+    eqbool(args_ref ops, eqbool_context &context);
 
     eqbool_context &get_context() const {
         assert(context);
@@ -57,9 +62,13 @@ private:
     const eqbool *ptr = nullptr;
     size_t xsize = 0;
 
+    args_ref(const eqbool *ptr, size_t size) : ptr(ptr), xsize(size) {}
+
 public:
     args_ref(const std::vector<eqbool> &args)
-        : ptr(args.data()), xsize(args.size()) {}
+        : args_ref(args.data(), args.size()) {}
+    args_ref(std::initializer_list<eqbool> args)
+        : args_ref(args.begin(), args.size()) {}
 
     const eqbool *data() const { return ptr; }
     size_t size() const { return xsize; }
@@ -90,6 +99,9 @@ public:
 
     friend class eqbool;
 };
+
+inline eqbool::eqbool(args_ref ops, eqbool_context &context)
+    : context(&context), ops(ops.begin(), ops.end()) {}
 
 inline bool eqbool::is_false() const {
     return *this == get_context().eqfalse;
