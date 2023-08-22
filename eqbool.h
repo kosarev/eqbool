@@ -63,7 +63,9 @@ public:
     args_ref(const std::vector<eqbool> &args)
         : ptr(args.data()), xsize(args.size()) {}
 
+    const eqbool *data() const { return ptr; }
     size_t size() const { return xsize; }
+    bool empty() const { return size() == 0; }
 };
 
 class eqbool_context {
@@ -78,6 +80,7 @@ public:
     eqbool get(const char *term);
 
     eqbool get_or(args_ref args);
+    eqbool get_and(args_ref args);
 
     eqbool invert(eqbool e);
 

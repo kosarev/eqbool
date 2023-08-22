@@ -72,6 +72,8 @@ private:
             e = eqbools.get(std::to_string(r).c_str());
         } else if(op == '|') {
             e = eqbools.get_or(args);
+        } else if(op == '&') {
+            e = eqbools.get_and(args);
         } else if(op == '~') {
             if(args.size() != 1)
                 fatal("one argument expected");

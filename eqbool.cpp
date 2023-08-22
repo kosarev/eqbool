@@ -17,11 +17,18 @@ eqbool eqbool_context::get(const char *term) {
 }
 
 eqbool eqbool_context::get_or(args_ref args) {
-    if(args.size() == 0)
+    if(args.empty())
         return eqfalse;
 
     // TODO
     assert(0);
+}
+
+eqbool eqbool_context::get_and(args_ref args) {
+    std::vector<eqbool> or_args(args.data(), args.data() + args.size());
+    for(eqbool &a : or_args)
+        a = ~a;
+    return ~get_or(or_args);
 }
 
 eqbool eqbool_context::invert(eqbool e) {
