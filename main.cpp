@@ -103,8 +103,8 @@ public:
     void process_test_lines() {
         std::string line;
         while(std::getline(std::cin, line)) {
-            process_test_line(line);
             std::cout << std::to_string(line_no) << ": " << line << "\n";
+            process_test_line(line);
         }
 
         if(!std::cin.eof())

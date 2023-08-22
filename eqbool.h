@@ -66,6 +66,9 @@ public:
     bool empty() const { return size() == 0; }
 
     eqbool operator [] (size_t i) const {  return ptr[i]; }
+
+    const eqbool *begin() const { return data(); }
+    const eqbool *end() const { return data() + size(); }
 };
 
 class eqbool_context {

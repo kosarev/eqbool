@@ -17,17 +17,23 @@ eqbool eqbool_context::get(const char *term) {
 }
 
 eqbool eqbool_context::get_or(args_ref args) {
-    if(args.empty())
+    std::vector<eqbool> selected_args;
+    for(eqbool a : args) {
+        if(!a.is_false())
+            selected_args.push_back(a);
+    }
+
+    if(selected_args.empty())
         return eqfalse;
-    if(args.size() == 1)
-        return args[0];
+    if(selected_args.size() == 1)
+        return selected_args[0];
 
     // TODO
     assert(0);
 }
 
 eqbool eqbool_context::get_and(args_ref args) {
-    std::vector<eqbool> or_args(args.data(), args.data() + args.size());
+    std::vector<eqbool> or_args(args.begin(), args.end());
     for(eqbool &a : or_args)
         a = ~a;
     return ~get_or(or_args);
