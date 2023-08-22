@@ -86,6 +86,9 @@ private:
     eqbool eqtrue{"1", *this};
 
 public:
+    bool is_false(eqbool e) const { return e == eqfalse; }
+    bool is_true(eqbool e) const { return e == eqtrue; }
+
     eqbool get_false() /* no const */ { return eqfalse; }
     eqbool get_true() /* no const */ { return eqtrue; }
     eqbool get(bool b) { return b ? get_true() : get_false(); }
@@ -96,19 +99,17 @@ public:
     eqbool get_eq(eqbool a, eqbool b);
     eqbool ifelse(eqbool i, eqbool t, eqbool e);
     eqbool invert(eqbool e);
-
-    friend class eqbool;
 };
 
 inline eqbool::eqbool(args_ref ops, eqbool_context &context)
     : context(&context), ops(ops.begin(), ops.end()) {}
 
 inline bool eqbool::is_false() const {
-    return *this == get_context().eqfalse;
+    return get_context().is_false(*this);
 }
 
 inline bool eqbool::is_true() const {
-    return *this == get_context().eqtrue;
+    return get_context().is_true(*this);
 }
 
 inline eqbool eqbool::operator ~ () const {
