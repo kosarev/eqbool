@@ -28,6 +28,11 @@ class test_context {
 private:
     eqbool_context context;
     std::vector<eqbool> nodes;
+    unsigned line_no = 0;
+
+    [[noreturn]] void fatal(std::string msg) {
+        ::fatal(std::to_string(line_no) + ": " + msg);
+    }
 
     void add_term(unsigned term) {
         size_t expected_term = nodes.size();
@@ -37,6 +42,7 @@ private:
     }
 
     void process_test_line(const std::string &line) {
+        ++line_no;
         std::istringstream s(line);
         char op;
         if(!(s >> op))
