@@ -12,8 +12,8 @@
 
 namespace eqbool {
 
-int foo() {
-    return 5;
+eqbool eqbool_context::get(const char *term) {
+    return eqbool(term);
 }
 
-}
+}  // namesapce eqbool
