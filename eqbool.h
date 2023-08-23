@@ -23,14 +23,17 @@ class eqbool_context;
 
 class eqbool {
 private:
+    enum class node_kind { none, not_node };
+
     eqbool_context *context = nullptr;
+    node_kind kind = node_kind::none;
     std::string term;
-    std::vector<eqbool> ops;
+    std::vector<eqbool> args;
 
     eqbool(const char *term, eqbool_context &context)
         : context(&context), term(term) {}
 
-    eqbool(args_ref ops, eqbool_context &context);
+    eqbool(node_kind kind, args_ref args, eqbool_context &context);
 
     eqbool_context &get_context() const {
         assert(context);
@@ -46,15 +49,15 @@ public:
     bool is_true() const;
     bool is_const() const { return is_false() || is_true(); }
 
-    bool operator == (const eqbool &other) const {
-        return term == other.term;
-    }
+    bool operator == (const eqbool &other) const;
 
     bool operator != (const eqbool &other) const {
         return !(term == other.term);
     }
 
     eqbool operator ~ () const;
+
+    std::ostream &dump(std::ostream &s) const;
 };
 
 class args_ref {
@@ -85,9 +88,11 @@ private:
     eqbool eqfalse{"0", *this};
     eqbool eqtrue{"1", *this};
 
+    void check(eqbool e) const { assert(&e.get_context() == this); }
+
 public:
-    bool is_false(eqbool e) const { return e == eqfalse; }
-    bool is_true(eqbool e) const { return e == eqtrue; }
+    bool is_false(eqbool e) const { check(e); return e == eqfalse; }
+    bool is_true(eqbool e) const { check(e); return e == eqtrue; }
 
     eqbool get_false() /* no const */ { return eqfalse; }
     eqbool get_true() /* no const */ { return eqtrue; }
@@ -99,10 +104,12 @@ public:
     eqbool get_eq(eqbool a, eqbool b);
     eqbool ifelse(eqbool i, eqbool t, eqbool e);
     eqbool invert(eqbool e);
+
+    std::ostream &dump(std::ostream &s, eqbool e) const;
 };
 
-inline eqbool::eqbool(args_ref ops, eqbool_context &context)
-    : context(&context), ops(ops.begin(), ops.end()) {}
+inline eqbool::eqbool(node_kind kind, args_ref args, eqbool_context &context)
+    : context(&context), kind(kind), args(args.begin(), args.end()) {}
 
 inline bool eqbool::is_false() const {
     return get_context().is_false(*this);
@@ -114,6 +121,14 @@ inline bool eqbool::is_true() const {
 
 inline eqbool eqbool::operator ~ () const {
     return get_context().invert(*this);
+}
+
+inline std::ostream &eqbool::dump(std::ostream &s) const {
+    return get_context().dump(s, *this);
+}
+
+inline std::ostream &operator << (std::ostream &s, eqbool e) {
+    return e.dump(s);
 }
 
 }  // namespace eqbool

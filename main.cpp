@@ -35,6 +35,10 @@ private:
         ::fatal(std::to_string(line_no) + ": " + msg);
     }
 
+    [[noreturn]] void fatal(std::ostringstream msg) const {
+        fatal(msg.str());
+    }
+
     eqbool get_node(unsigned i) const {
         if(i >= nodes.size())
             fatal("undefined node");
@@ -91,8 +95,13 @@ private:
         }
 
         if(assert) {
-            if(get_node(r) != e)
-                fatal("nodes do not match");
+            eqbool expected = get_node(r);
+            if(e != expected) {
+                fatal(std::ostringstream() <<
+                          "nodes do not match\n"
+                          "actual: " << e << "\n"
+                          "expected: " << expected);
+            }
             return;
         }
 
