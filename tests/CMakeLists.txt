@@ -7,6 +7,7 @@ set(TESTS
     ifelse.test
     not.test
     or.test
+    sat.test
     term.test)
 
 foreach(test ${TESTS})

@@ -105,6 +105,9 @@ public:
     eqbool ifelse(eqbool i, eqbool t, eqbool e);
     eqbool invert(eqbool e);
 
+    bool is_unsat(eqbool e);
+    bool is_equiv(eqbool a, eqbool b);
+
     std::ostream &dump(std::ostream &s, eqbool e) const;
 };
 

@@ -91,6 +91,13 @@ private:
         } else if(op == '~') {
             check_num_args(args, 1);
             e = ~args[0];
+        } else if(op == 'q') {
+            check_num_args(args, 2);
+            if(r != 0 && r != 1)
+                fatal("constant result expected");
+            if(eqbools.is_equiv(args[0], args[1]) != static_cast<bool>(r))
+                fatal("equivalence check failed");
+            return;
         } else {
             fatal("unknown operator");
         }

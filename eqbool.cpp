@@ -106,6 +106,18 @@ eqbool eqbool_context::invert(eqbool e) {
     return eqbool(eqbool::node_kind::not_node, {e}, *this);
 }
 
+bool eqbool_context::is_unsat(eqbool e) {
+    if(e.is_const())
+        return e.is_false();
+
+    // TODO
+    assert(0);
+}
+
+bool eqbool_context::is_equiv(eqbool a, eqbool b) {
+    return is_unsat(~get_eq(a, b));
+}
+
 std::ostream &eqbool_context::dump(std::ostream &s, eqbool e) const {
     switch(e.kind) {
     case eqbool::node_kind::none:
