@@ -45,6 +45,11 @@ private:
         return nodes[i];
     }
 
+    void check_num_args(const std::vector<eqbool> &args, unsigned n) const {
+        if(args.size() != n)
+            fatal(std::to_string(n) + " arguments expected");
+    }
+
     void process_test_line(const std::string &line) {
         std::istringstream s(line);
         char op;
@@ -71,24 +76,20 @@ private:
 
         eqbool e;
         if(op == '.') {
-            if(args.size() != 0)
-                fatal("no arguments expected");
+            check_num_args(args, 0);
             e = eqbools.get(std::to_string(r).c_str());
         } else if(op == '|') {
             e = eqbools.get_or(args);
         } else if(op == '&') {
             e = eqbools.get_and(args);
         } else if(op == '=') {
-            if(args.size() != 2)
-                fatal("2 arguments expected");
+            check_num_args(args, 2);
             e = eqbools.get_eq(args[0], args[1]);
         } else if(op == '?') {
-            if(args.size() != 3)
-                fatal("3 arguments expected");
+            check_num_args(args, 3);
             e = eqbools.ifelse(args[0], args[1], args[2]);
         } else if(op == '~') {
-            if(args.size() != 1)
-                fatal("one argument expected");
+            check_num_args(args, 1);
             e = ~args[0];
         } else {
             fatal("unknown operator");
