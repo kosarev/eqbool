@@ -8,11 +8,21 @@
     Published under the MIT license.
 */
 
+#include <algorithm>
 #include <ostream>
 
 #include "eqbool.h"
 
 namespace eqbool {
+
+namespace {
+
+template<typename C, typename E>
+bool contains(const C &c, const E &e) {
+    return std::find(c.begin(), c.end(), e) != c.end();
+}
+
+}  // anonymous namespace
 
 bool eqbool::operator == (const eqbool &other) const {
     assert(&get_context() == &other.get_context());
@@ -38,7 +48,7 @@ eqbool eqbool_context::get_or(args_ref args) {
         check(a);
         if(a.is_false())
             continue;
-        if(a.is_true())
+        if(a.is_true() || contains(selected_args, ~a))
             return eqtrue;
         selected_args.push_back(a);
     }
