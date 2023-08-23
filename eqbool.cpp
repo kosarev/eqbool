@@ -58,8 +58,7 @@ eqbool eqbool_context::get_or(args_ref args) {
     if(selected_args.size() == 1)
         return selected_args[0];
 
-    // TODO
-    assert(0);
+    return eqbool(eqbool::node_kind::or_node, selected_args, *this);
 }
 
 eqbool eqbool_context::get_and(args_ref args) {
@@ -118,16 +117,32 @@ bool eqbool_context::is_equiv(eqbool a, eqbool b) {
     return is_unsat(~get_eq(a, b));
 }
 
-std::ostream &eqbool_context::dump(std::ostream &s, eqbool e) const {
+std::ostream &eqbool_context::dump_helper(std::ostream &s, eqbool e,
+                                          bool subexpr) const {
     switch(e.kind) {
     case eqbool::node_kind::none:
         return s << e.term;
+    case eqbool::node_kind::or_node:
+        if(subexpr)
+            s << "(";
+        s << "or";
+        for(eqbool a : e.args) {
+            s << " ";
+            dump_helper(s, a, /* subexpr= */ true);
+        }
+        if(subexpr)
+            s << ")";
+        return s;
     case eqbool::node_kind::not_node:
-        return s << "not " << e.args[0];
+        return s << "~" << e.args[0];
     }
 
     // TODO
     assert(0);
+}
+
+std::ostream &eqbool_context::dump(std::ostream &s, eqbool e) const {
+    return dump_helper(s, e, /* subexpr= */ false);
 }
 
 }  // namesapce eqbool

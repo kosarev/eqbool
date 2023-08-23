@@ -23,7 +23,7 @@ class eqbool_context;
 
 class eqbool {
 private:
-    enum class node_kind { none, not_node };
+    enum class node_kind { none, or_node, not_node };
 
     eqbool_context *context = nullptr;
     node_kind kind = node_kind::none;
@@ -89,6 +89,8 @@ private:
     eqbool eqtrue{"1", *this};
 
     void check(eqbool e) const { assert(&e.get_context() == this); }
+
+    std::ostream &dump_helper(std::ostream &s, eqbool e, bool subexpr) const;
 
 public:
     bool is_false(eqbool e) const { check(e); return e == eqfalse; }
