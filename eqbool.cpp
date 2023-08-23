@@ -88,6 +88,8 @@ eqbool eqbool_context::invert(eqbool e) {
     check(e);
     if(e.is_const())
         return get(!e.is_true());
+    if(e.kind == eqbool::node_kind::not_node)
+        return e.args[0];
 
     return eqbool(eqbool::node_kind::not_node, {e}, *this);
 }
