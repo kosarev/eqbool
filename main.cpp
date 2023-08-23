@@ -122,7 +122,7 @@ public:
         while(std::getline(f, line)) {
             ++line_no;
             std::cout << std::to_string(line_no) << ": " << line << "\n";
-            if(!line.empty())
+            if(!line.empty() && line[0] != '#')
                 process_test_line(line);
         }
 

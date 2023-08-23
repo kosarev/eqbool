@@ -75,6 +75,8 @@ eqbool eqbool_context::get_eq(eqbool a, eqbool b) {
     check(a);
     check(b);
 
+    if(b.is_false())
+        return ~a;
     if(a.is_const() && b.is_const())
         return get(a.is_false() == b.is_false());
 
