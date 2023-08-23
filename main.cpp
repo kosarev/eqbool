@@ -95,8 +95,11 @@ private:
             check_num_args(args, 2);
             if(r != 0 && r != 1)
                 fatal("constant result expected");
+            unsigned sat_count = eqbools.get_sat_count();
             if(eqbools.is_equiv(args[0], args[1]) != static_cast<bool>(r))
                 fatal("equivalence check failed");
+            if(assert && eqbools.get_sat_count() == sat_count)
+                fatal("equivlance check resolved without using SAT solver");
             return;
         } else {
             fatal("unknown operator");

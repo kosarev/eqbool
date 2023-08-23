@@ -23,7 +23,7 @@ class eqbool_context;
 
 class eqbool {
 private:
-    enum class node_kind { none, or_node, not_node };
+    enum class node_kind { none, or_node, ifelse, not_node };
 
     eqbool_context *context = nullptr;
     node_kind kind = node_kind::none;
@@ -88,6 +88,8 @@ private:
     eqbool eqfalse{"0", *this};
     eqbool eqtrue{"1", *this};
 
+    unsigned sat_count = 0;
+
     void check(eqbool e) const { assert(&e.get_context() == this); }
 
     std::ostream &dump_helper(std::ostream &s, eqbool e, bool subexpr) const;
@@ -106,6 +108,8 @@ public:
     eqbool get_eq(eqbool a, eqbool b);
     eqbool ifelse(eqbool i, eqbool t, eqbool e);
     eqbool invert(eqbool e);
+
+    unsigned get_sat_count() const { return sat_count; }
 
     bool is_unsat(eqbool e);
     bool is_equiv(eqbool a, eqbool b);

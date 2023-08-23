@@ -79,8 +79,10 @@ eqbool eqbool_context::get_eq(eqbool a, eqbool b) {
     if(a.is_const() && b.is_const())
         return get(a.is_false() == b.is_false());
 
-    // TODO
-    assert(0);
+    // XOR gates take the same number of clauses with the same
+    // number of literals as IFELSE gates, so it doesn't make
+    // sense to have special support for them.
+    return eqbool(eqbool::node_kind::ifelse, {a, b, ~b}, *this);
 }
 
 eqbool eqbool_context::ifelse(eqbool i, eqbool t, eqbool e) {
@@ -123,9 +125,10 @@ std::ostream &eqbool_context::dump_helper(std::ostream &s, eqbool e,
     case eqbool::node_kind::none:
         return s << e.term;
     case eqbool::node_kind::or_node:
+    case eqbool::node_kind::ifelse:
         if(subexpr)
             s << "(";
-        s << "or";
+        s << (e.kind == eqbool::node_kind::or_node ? "or" : "ifelse");
         for(eqbool a : e.args) {
             s << " ";
             dump_helper(s, a, /* subexpr= */ true);
