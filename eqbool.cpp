@@ -248,8 +248,6 @@ std::ostream &eqbool_context::dump_helper(std::ostream &s, eqbool e,
         dump_helper(s, e.args[0], /* subexpr= */ true);
         return s;
     }
-
-    // TODO
     assert(0);
 }
 
