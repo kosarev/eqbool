@@ -1,9 +1,8 @@
 q 0 0 1
 q 1 0 0
 
-# TODO
 # Use SAT solver. This is supposed to fail if equivalence or
 # non-equivalence was established by means of simplification.
-# . 2
-# . 3
-# ! q 0 2 3
+. 2
+. 3
+! q 0 2 3

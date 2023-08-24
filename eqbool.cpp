@@ -11,6 +11,15 @@
 #include <algorithm>
 #include <ostream>
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wzero-as-null-pointer-constant"
+#pragma GCC diagnostic ignored "-Wextra-semi"
+#ifdef __clang__
+#pragma GCC diagnostic ignored "-Wweak-vtables"
+#endif
+#include "cadical/src/cadical.hpp"
+#pragma GCC diagnostic pop
+
 #include "eqbool.h"
 
 namespace eqbool {
@@ -39,7 +48,7 @@ bool eqbool::operator == (const eqbool &other) const {
 }
 
 eqbool eqbool_context::get(const char *term) {
-    return eqbool(term, *this);
+    return eqbool(term, get_sat_literal(), *this);
 }
 
 eqbool eqbool_context::get_or(args_ref args) {
@@ -58,7 +67,8 @@ eqbool eqbool_context::get_or(args_ref args) {
     if(selected_args.size() == 1)
         return selected_args[0];
 
-    return eqbool(eqbool::node_kind::or_node, selected_args, *this);
+    return eqbool(eqbool::node_kind::or_node, selected_args,
+                  get_sat_literal(), *this);
 }
 
 eqbool eqbool_context::get_and(args_ref args) {
@@ -82,7 +92,8 @@ eqbool eqbool_context::get_eq(eqbool a, eqbool b) {
     // XOR gates take the same number of clauses with the same
     // number of literals as IFELSE gates, so it doesn't make
     // sense to have special support for them.
-    return eqbool(eqbool::node_kind::ifelse, {a, b, ~b}, *this);
+    return eqbool(eqbool::node_kind::ifelse, {a, b, ~b},
+                  get_sat_literal(), *this);
 }
 
 eqbool eqbool_context::ifelse(eqbool i, eqbool t, eqbool e) {
@@ -104,15 +115,87 @@ eqbool eqbool_context::invert(eqbool e) {
     if(e.kind == eqbool::node_kind::not_node)
         return e.args[0];
 
-    return eqbool(eqbool::node_kind::not_node, {e}, *this);
+    return eqbool(eqbool::node_kind::not_node, {e},
+                  get_sat_literal(), *this);
+}
+
+int eqbool_context::skip_not(eqbool &e) {
+    if(e.kind != eqbool::node_kind::not_node)
+        return e.sat_literal;
+
+    e = e.args[0];
+    assert(e.kind != eqbool::node_kind::not_node);
+    return -e.sat_literal;
 }
 
 bool eqbool_context::is_unsat(eqbool e) {
     if(e.is_const())
         return e.is_false();
 
-    // TODO
-    assert(0);
+    auto *solver = new CaDiCaL::Solver;
+
+    solver->add(skip_not(e));
+    solver->add(0);
+
+    std::vector<eqbool> worklist({e});
+    while(!worklist.empty()) {
+        eqbool n = worklist.back();
+        worklist.pop_back();
+
+        int r_lit = n.sat_literal;
+
+        switch(n.kind) {
+        case eqbool::node_kind::none:
+            assert(!n.is_const());
+            continue;
+        case eqbool::node_kind::or_node:
+            // TODO
+            assert(0);
+        case eqbool::node_kind::ifelse: {
+            eqbool i_arg = n.args[0], t_arg = n.args[1], e_arg = n.args[2];
+            int i_lit = skip_not(i_arg), t_lit = skip_not(t_arg),
+                e_lit = skip_not(e_arg);
+
+            solver->add(-i_lit);
+            solver->add(t_lit);
+            solver->add(-r_lit);
+            solver->add(0);
+
+            solver->add(-i_lit);
+            solver->add(-t_lit);
+            solver->add(r_lit);
+            solver->add(0);
+
+            solver->add(i_lit);
+            solver->add(e_lit);
+            solver->add(-r_lit);
+            solver->add(0);
+
+            solver->add(i_lit);
+            solver->add(-e_lit);
+            solver->add(r_lit);
+            solver->add(0);
+
+            worklist.push_back(i_arg);
+            worklist.push_back(t_arg);
+            worklist.push_back(e_arg);
+            continue;
+        }
+        case eqbool::node_kind::not_node:
+            // Inversions should all be translated to negative
+            // literals by now.
+            assert(0);
+        }
+        assert(0);
+    }
+
+    bool unsat = solver->solve() == 20;
+
+    ++sat_solve_count;
+
+    delete solver;
+
+    return unsat;
 }
 
 bool eqbool_context::is_equiv(eqbool a, eqbool b) {

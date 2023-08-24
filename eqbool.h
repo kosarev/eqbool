@@ -29,11 +29,13 @@ private:
     node_kind kind = node_kind::none;
     std::string term;
     std::vector<eqbool> args;
+    int sat_literal = 0;
 
-    eqbool(const char *term, eqbool_context &context)
-        : context(&context), term(term) {}
+    eqbool(const char *term, int sat_literal, eqbool_context &context)
+        : context(&context), term(term), sat_literal(sat_literal) {}
 
-    eqbool(node_kind kind, args_ref args, eqbool_context &context);
+    eqbool(node_kind kind, args_ref args, int sat_literal,
+           eqbool_context &context);
 
     eqbool_context &get_context() const {
         assert(context);
@@ -85,12 +87,17 @@ public:
 
 class eqbool_context {
 private:
-    eqbool eqfalse{"0", *this};
-    eqbool eqtrue{"1", *this};
+    eqbool eqfalse{"0", get_sat_literal(), *this};
+    eqbool eqtrue{"1", get_sat_literal(), *this};
 
-    unsigned sat_count = 0;
+    int sat_literal_count = 0;
+    unsigned sat_solve_count = 0;
+
+    int get_sat_literal() { return ++sat_literal_count; }
 
     void check(eqbool e) const { assert(&e.get_context() == this); }
+
+    int skip_not(eqbool &e);
 
     std::ostream &dump_helper(std::ostream &s, eqbool e, bool subexpr) const;
 
@@ -109,7 +116,7 @@ public:
     eqbool ifelse(eqbool i, eqbool t, eqbool e);
     eqbool invert(eqbool e);
 
-    unsigned get_sat_count() const { return sat_count; }
+    unsigned get_sat_solve_count() const { return sat_solve_count; }
 
     bool is_unsat(eqbool e);
     bool is_equiv(eqbool a, eqbool b);
@@ -117,8 +124,10 @@ public:
     std::ostream &dump(std::ostream &s, eqbool e) const;
 };
 
-inline eqbool::eqbool(node_kind kind, args_ref args, eqbool_context &context)
-    : context(&context), kind(kind), args(args.begin(), args.end()) {}
+inline eqbool::eqbool(node_kind kind, args_ref args, int sat_literal,
+                      eqbool_context &context)
+    : context(&context), kind(kind), args(args.begin(), args.end()),
+      sat_literal(sat_literal) {}
 
 inline bool eqbool::is_false() const {
     return get_context().is_false(*this);
