@@ -244,7 +244,9 @@ std::ostream &eqbool_context::dump_helper(std::ostream &s, eqbool e,
             s << ")";
         return s;
     case eqbool::node_kind::not_node:
-        return s << "~" << e.args[0];
+        s << "~";
+        dump_helper(s, e.args[0], /* subexpr= */ true);
+        return s;
     }
 
     // TODO
