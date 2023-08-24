@@ -110,8 +110,8 @@ eqbool eqbool_context::ifelse(eqbool i, eqbool t, eqbool e) {
     if(i.is_const())
         return i.is_true() ? t : e;
 
-    // TODO
-    assert(0);
+    return eqbool(eqbool::node_kind::ifelse, {i, t, e},
+                  get_sat_literal(), *this);
 }
 
 eqbool eqbool_context::invert(eqbool e) {
