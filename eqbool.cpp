@@ -151,9 +151,24 @@ bool eqbool_context::is_unsat(eqbool e) {
                 solver->add(0);
             }
             continue;
-        case eqbool::node_kind::or_node:
-            // TODO
-            assert(0);
+        case eqbool::node_kind::or_node: {
+            std::vector<int> arg_lits;
+            for(eqbool a : n.args) {
+                int a_lit = skip_not(a);
+                solver->add(-a_lit);
+                solver->add(r_lit);
+                solver->add(0);
+
+                arg_lits.push_back(a_lit);
+                worklist.push_back(a);
+            }
+
+            for(int a_lit : arg_lits)
+                solver->add(a_lit);
+            solver->add(-r_lit);
+            solver->add(0);
+            continue;
+        }
         case eqbool::node_kind::ifelse: {
             eqbool i_arg = n.args[0], t_arg = n.args[1], e_arg = n.args[2];
             int i_lit = skip_not(i_arg), t_lit = skip_not(t_arg),
