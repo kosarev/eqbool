@@ -146,7 +146,10 @@ bool eqbool_context::is_unsat(eqbool e) {
 
         switch(n.kind) {
         case eqbool::node_kind::none:
-            assert(!n.is_const());
+            if(n.is_const()) {
+                solver->add(n.is_true() ? r_lit : -r_lit);
+                solver->add(0);
+            }
             continue;
         case eqbool::node_kind::or_node:
             // TODO
