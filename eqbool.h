@@ -87,10 +87,10 @@ public:
 
 class eqbool_context {
 private:
+    int sat_literal_count = 0;
     eqbool eqfalse{"0", get_sat_literal(), *this};
     eqbool eqtrue{"1", get_sat_literal(), *this};
 
-    int sat_literal_count = 0;
     unsigned sat_solve_count = 0;
 
     int get_sat_literal() { return ++sat_literal_count; }
@@ -102,6 +102,8 @@ private:
     std::ostream &dump_helper(std::ostream &s, eqbool e, bool subexpr) const;
 
 public:
+    eqbool_context();
+
     bool is_false(eqbool e) const { check(e); return e == eqfalse; }
     bool is_true(eqbool e) const { check(e); return e == eqtrue; }
 

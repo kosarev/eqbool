@@ -47,6 +47,12 @@ bool eqbool::operator == (const eqbool &other) const {
     return true;
 }
 
+eqbool_context::eqbool_context() {
+    assert(eqfalse.sat_literal == 1);
+    assert(eqtrue.sat_literal == 2);
+    assert(sat_literal_count == 2);
+}
+
 eqbool eqbool_context::get(const char *term) {
     return eqbool(term, get_sat_literal(), *this);
 }
