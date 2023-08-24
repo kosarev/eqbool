@@ -54,7 +54,7 @@ public:
     bool operator == (const eqbool &other) const;
 
     bool operator != (const eqbool &other) const {
-        return !(term == other.term);
+        return !(*this == other);
     }
 
     eqbool operator ~ () const;
