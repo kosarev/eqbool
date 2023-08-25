@@ -143,7 +143,7 @@ set(CADICAL_SRCS
     cadical/src/watch.cpp)
 
 set_source_files_properties(${CADICAL_SRCS}
-    PROPERTIES COMPILE_FLAGS "-DNBUILD")
+    PROPERTIES COMPILE_FLAGS "-DNBUILD -DQUIET")
 
 add_executable(eqbool ${EQBOOL_SRCS} ${CADICAL_SRCS})
 
