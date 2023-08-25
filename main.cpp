@@ -145,12 +145,12 @@ public:
 }  // anonymous namespace
 
 int main(int argc, const char **argv) {
-    test_context c;
     for(int i = 1; i != argc; ++i) {
         std::string path = argv[i];
         std::ifstream f(path);
         if(!f)
             fatal("cannot open " + path);
+        test_context c;
         c.process_test_lines(f);
     }
 }
