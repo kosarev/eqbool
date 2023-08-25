@@ -165,6 +165,7 @@ bool eqbool_context::is_unsat(eqbool e) {
                 solver->add(-a_lit);
                 solver->add(r_lit);
                 solver->add(0);
+                ++stats.num_clauses;
 
                 arg_lits.push_back(a_lit);
                 worklist.push_back(a);
@@ -174,6 +175,7 @@ bool eqbool_context::is_unsat(eqbool e) {
                 solver->add(a_lit);
             solver->add(-r_lit);
             solver->add(0);
+            ++stats.num_clauses;
             continue;
         }
         case eqbool::node_kind::ifelse: {
@@ -185,21 +187,25 @@ bool eqbool_context::is_unsat(eqbool e) {
             solver->add(t_lit);
             solver->add(-r_lit);
             solver->add(0);
+            ++stats.num_clauses;
 
             solver->add(-i_lit);
             solver->add(-t_lit);
             solver->add(r_lit);
             solver->add(0);
+            ++stats.num_clauses;
 
             solver->add(i_lit);
             solver->add(e_lit);
             solver->add(-r_lit);
             solver->add(0);
+            ++stats.num_clauses;
 
             solver->add(i_lit);
             solver->add(-e_lit);
             solver->add(r_lit);
             solver->add(0);
+            ++stats.num_clauses;
 
             worklist.push_back(i_arg);
             worklist.push_back(t_arg);

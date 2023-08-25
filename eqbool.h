@@ -102,7 +102,8 @@ public:
 
 struct eqbool_stats {
     long sat_time = 0;
-    unsigned sat_solution_count = 0;
+    unsigned long sat_solution_count = 0;
+    unsigned long num_clauses = 0;
 };
 
 class eqbool_context {

@@ -98,7 +98,7 @@ private:
             check_num_args(args, 2);
             if(r != 0 && r != 1)
                 fatal("constant result expected");
-            unsigned count = eqbools.get_stats().sat_solution_count;
+            unsigned long count = eqbools.get_stats().sat_solution_count;
             if(eqbools.is_equiv(args[0], args[1]) != static_cast<bool>(r))
                 fatal("equivalence check failed");
             if(assert && eqbools.get_stats().sat_solution_count == count)
@@ -132,7 +132,8 @@ private:
             "line " << line_no << ": " <<
             cpu_time << " CPU ms, " <<
             stats.sat_time << " SAT ms, " <<
-            stats.sat_solution_count << " solutions" <<
+            stats.sat_solution_count << " solutions, " <<
+            stats.num_clauses << " clauses" <<
             "\n";
     }
 
