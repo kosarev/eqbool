@@ -97,10 +97,10 @@ private:
             check_num_args(args, 2);
             if(r != 0 && r != 1)
                 fatal("constant result expected");
-            unsigned count = eqbools.get_sat_solve_count();
+            unsigned count = eqbools.get_stats().sat_solve_count;
             if(eqbools.is_equiv(args[0], args[1]) != static_cast<bool>(r))
                 fatal("equivalence check failed");
-            if(assert && eqbools.get_sat_solve_count() == count)
+            if(assert && eqbools.get_stats().sat_solve_count == count)
                 fatal("equivlance check resolved without using SAT solver");
             return;
         } else {

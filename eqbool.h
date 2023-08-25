@@ -100,13 +100,17 @@ public:
     const eqbool *end() const { return data() + size(); }
 };
 
+struct eqbool_stats {
+    unsigned sat_solve_count = 0;
+};
+
 class eqbool_context {
 private:
     int sat_literal_count = 0;
     eqbool eqfalse{"0", get_sat_literal(), *this};
     eqbool eqtrue{"1", get_sat_literal(), *this};
 
-    unsigned sat_solve_count = 0;
+    eqbool_stats stats;
 
     int get_sat_literal() { return ++sat_literal_count; }
 
@@ -136,7 +140,7 @@ public:
     eqbool ifelse(eqbool i, eqbool t, eqbool e);
     eqbool invert(eqbool e);
 
-    unsigned get_sat_solve_count() const { return sat_solve_count; }
+    const eqbool_stats &get_stats() const { return stats; }
 
     bool is_unsat(eqbool e);
     bool is_equiv(eqbool a, eqbool b);
