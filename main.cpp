@@ -21,7 +21,7 @@ using eqbool::eqbool_context;
 using eqbool::eqbool;
 
 [[noreturn]] static void fatal(std::string msg) {
-    std::cerr << "error: " << msg << std::endl;
+    std::cerr << msg << std::endl;
     std::exit(EXIT_FAILURE);
 }
 
@@ -29,10 +29,12 @@ class test_context {
 private:
     eqbool_context eqbools;
     std::vector<eqbool> nodes;
+
+    std::string filepath;
     unsigned line_no = 0;
 
     [[noreturn]] void fatal(std::string msg) const {
-        ::fatal(std::to_string(line_no) + ": " + msg);
+        ::fatal(filepath + ": " + std::to_string(line_no) + ": " + msg);
     }
 
     [[noreturn]] void fatal(std::ostringstream msg) const {
@@ -123,7 +125,7 @@ private:
     }
 
 public:
-    test_context() {
+    test_context(std::string filepath) : filepath(filepath) {
         nodes.push_back(eqbools.get_false());
         nodes.push_back(eqbools.get_true());
     }
@@ -150,7 +152,7 @@ int main(int argc, const char **argv) {
         std::ifstream f(path);
         if(!f)
             fatal("cannot open " + path);
-        test_context c;
+        test_context c(path);
         c.process_test_lines(f);
     }
 }
