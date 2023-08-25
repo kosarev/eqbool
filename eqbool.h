@@ -21,6 +21,21 @@ namespace eqbool {
 class args_ref;
 class eqbool_context;
 
+static inline void unused(...) {}
+
+[[noreturn]] static inline void unreachable(const char *msg) {
+#if !defined(NDEBUG)
+     std::fprintf(stderr, "%s\n", msg);
+    std::abort();
+#elif defined(_MSC_VER)
+    unused(msg);
+    __assume(0);
+#else
+    unused(msg);
+    __builtin_unreachable();
+#endif
+}
+
 class eqbool {
 private:
     enum class node_kind { none, or_node, ifelse, not_node };
@@ -95,7 +110,10 @@ private:
 
     int get_sat_literal() { return ++sat_literal_count; }
 
-    void check(eqbool e) const { assert(&e.get_context() == this); }
+    void check(eqbool e) const {
+        unused(&e);
+        assert(&e.get_context() == this);
+    }
 
     int skip_not(eqbool &e);
 

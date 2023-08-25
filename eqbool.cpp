@@ -206,11 +206,9 @@ bool eqbool_context::is_unsat(eqbool e) {
             continue;
         }
         case eqbool::node_kind::not_node:
-            // Inversions should all be translated to negative
-            // literals by now.
-            assert(0);
+            unreachable("unskipped NOT node encountered");
         }
-        assert(0);
+        unreachable("unknown node kind");
     }
 
     bool unsat = solver->solve() == 20;
@@ -248,7 +246,7 @@ std::ostream &eqbool_context::dump_helper(std::ostream &s, eqbool e,
         dump_helper(s, e.args[0], /* subexpr= */ true);
         return s;
     }
-    assert(0);
+    unreachable("unknown node kind");
 }
 
 std::ostream &eqbool_context::dump(std::ostream &s, eqbool e) const {
