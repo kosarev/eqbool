@@ -130,7 +130,8 @@ private:
         const ::eqbool::eqbool_stats &stats = eqbools.get_stats();
         std::cout <<
             "line " << line_no << ": " <<
-            cpu_time << " ms, " <<
+            cpu_time << " CPU ms, " <<
+            stats.sat_time << " SAT ms, " <<
             stats.sat_solution_count << " solutions" <<
             "\n";
     }

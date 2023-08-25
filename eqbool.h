@@ -101,6 +101,7 @@ public:
 };
 
 struct eqbool_stats {
+    long sat_time = 0;
     unsigned sat_solution_count = 0;
 };
 
