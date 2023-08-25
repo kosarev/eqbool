@@ -14,6 +14,8 @@
 #include <sstream>
 #include <vector>
 
+#include <malloc.h>
+
 #include "eqbool.h"
 
 namespace {
@@ -133,8 +135,8 @@ private:
             cpu_time << " CPU ms, " <<
             stats.sat_time << " SAT ms, " <<
             stats.sat_solution_count << " solutions, " <<
-            stats.num_clauses << " clauses" <<
-            "\n";
+            stats.num_clauses << " clauses, " <<
+            ::mallinfo2().uordblks / 1024 << "K allocated\n";
     }
 
 public:
