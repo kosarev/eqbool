@@ -213,7 +213,7 @@ bool eqbool_context::is_unsat(eqbool e) {
 
     bool unsat = solver->solve() == 20;
 
-    ++stats.sat_solve_count;
+    ++stats.sat_solution_count;
 
     delete solver;
 

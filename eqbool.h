@@ -101,7 +101,7 @@ public:
 };
 
 struct eqbool_stats {
-    unsigned sat_solve_count = 0;
+    unsigned sat_solution_count = 0;
 };
 
 class eqbool_context {

@@ -8,6 +8,7 @@
     Published under the MIT license.
 */
 
+#include <ctime>
 #include <fstream>
 #include <iostream>
 #include <sstream>
@@ -97,10 +98,10 @@ private:
             check_num_args(args, 2);
             if(r != 0 && r != 1)
                 fatal("constant result expected");
-            unsigned count = eqbools.get_stats().sat_solve_count;
+            unsigned count = eqbools.get_stats().sat_solution_count;
             if(eqbools.is_equiv(args[0], args[1]) != static_cast<bool>(r))
                 fatal("equivalence check failed");
-            if(assert && eqbools.get_stats().sat_solve_count == count)
+            if(assert && eqbools.get_stats().sat_solution_count == count)
                 fatal("equivlance check resolved without using SAT solver");
             return;
         } else {
@@ -124,6 +125,16 @@ private:
         nodes.push_back(e);
     }
 
+    void print_stats() const {
+        long cpu_time = 1000 * std::clock() / CLOCKS_PER_SEC;
+        const ::eqbool::eqbool_stats &stats = eqbools.get_stats();
+        std::cout <<
+            "line " << line_no << ": " <<
+            cpu_time << " ms, " <<
+            stats.sat_solution_count << " solutions" <<
+            "\n";
+    }
+
 public:
     test_context(std::string filepath) : filepath(filepath) {
         nodes.push_back(eqbools.get_false());
@@ -137,6 +148,8 @@ public:
             // std::cout << std::to_string(line_no) << ": " << line << "\n";
             if(!line.empty() && line[0] != '#')
                 process_test_line(line);
+            if(line_no % 2000 == 0)
+                print_stats();
         }
 
         if(!f.eof())
