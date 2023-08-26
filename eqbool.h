@@ -13,12 +13,14 @@
 
 #include <cassert>
 #include <initializer_list>
+#include <list>
 #include <string>
 #include <vector>
 
 namespace eqbool {
 
 class args_ref;
+class eqbool;
 class eqbool_context;
 
 static inline void unused(...) {}
@@ -53,25 +55,48 @@ public:
     ~timer() { total += now() - start; }
 };
 
-class eqbool {
-private:
-    enum class node_kind { none, or_node, ifelse, not_node };
+namespace detail {
 
+enum class node_kind { none, or_node, ifelse, not_node };
+
+struct node_def {
     eqbool_context *context = nullptr;
     node_kind kind = node_kind::none;
     std::string term;
     std::vector<eqbool> args;
     int sat_literal = 0;
 
-    eqbool(const char *term, int sat_literal, eqbool_context &context)
+    node_def(const char *term, int sat_literal, eqbool_context &context)
         : context(&context), term(term), sat_literal(sat_literal) {}
 
-    eqbool(node_kind kind, args_ref args, int sat_literal,
-           eqbool_context &context);
+    node_def(node_kind kind, args_ref args, int sat_literal,
+             eqbool_context &context);
+
+    bool operator == (const node_def &other) const;
 
     eqbool_context &get_context() const {
         assert(context);
         return *context;
+    }
+};
+
+}  // namespace detail
+
+class eqbool {
+private:
+    using node_def = detail::node_def;
+
+    const node_def *def = nullptr;
+
+    eqbool(const node_def &def) : def(&def) {}
+
+    const node_def &get_def() const {
+        assert(def);
+        return *def;
+    }
+
+    eqbool_context &get_context() const {
+        return get_def().get_context();
     }
 
     friend class eqbool_context;
@@ -83,7 +108,9 @@ public:
     bool is_true() const;
     bool is_const() const { return is_false() || is_true(); }
 
-    bool operator == (const eqbool &other) const;
+    bool operator == (const eqbool &other) const {
+        return get_def() == other.get_def();
+    }
 
     bool operator != (const eqbool &other) const {
         return !(*this == other);
@@ -126,13 +153,20 @@ struct eqbool_stats {
 
 class eqbool_context {
 private:
+    using node_def = detail::node_def;
+
     int sat_literal_count = 0;
-    eqbool eqfalse{"0", get_sat_literal(), *this};
-    eqbool eqtrue{"1", get_sat_literal(), *this};
+
+    std::list<node_def> defs;
 
     eqbool_stats stats;
 
+    eqbool eqfalse{get_def(node_def("0", get_sat_literal(), *this))};
+    eqbool eqtrue{get_def(node_def("1", get_sat_literal(), *this))};
+
     int get_sat_literal() { return ++sat_literal_count; }
+
+    node_def &get_def(const node_def &def);
 
     void check(eqbool e) const {
         unused(&e);
@@ -168,8 +202,8 @@ public:
     std::ostream &dump(std::ostream &s, eqbool e) const;
 };
 
-inline eqbool::eqbool(node_kind kind, args_ref args, int sat_literal,
-                      eqbool_context &context)
+inline detail::node_def::node_def(node_kind kind, args_ref args,
+                                  int sat_literal, eqbool_context &context)
     : context(&context), kind(kind), args(args.begin(), args.end()),
       sat_literal(sat_literal) {}
 
