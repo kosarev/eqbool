@@ -11,6 +11,7 @@
 #include <algorithm>
 #include <ctime>
 #include <ostream>
+#include <unordered_set>
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wzero-as-null-pointer-constant"
@@ -156,9 +157,11 @@ bool eqbool_context::is_unsat(eqbool e) {
     solver->add(0);
 
     std::vector<eqbool> worklist({e});
+    std::unordered_set<const node_def*> visited;
     while(!worklist.empty()) {
         eqbool n = worklist.back();
         worklist.pop_back();
+        visited.insert(&n.get_def());
 
         int r_lit = n.get_def().sat_literal;
 
@@ -179,7 +182,8 @@ bool eqbool_context::is_unsat(eqbool e) {
                 ++stats.num_clauses;
 
                 arg_lits.push_back(a_lit);
-                worklist.push_back(a);
+                if(!contains(visited, &a.get_def()))
+                    worklist.push_back(a);
             }
 
             for(int a_lit : arg_lits)
@@ -221,9 +225,12 @@ bool eqbool_context::is_unsat(eqbool e) {
             solver->add(0);
             ++stats.num_clauses;
 
-            worklist.push_back(i_arg);
-            worklist.push_back(t_arg);
-            worklist.push_back(e_arg);
+            if(!contains(visited, &i_arg.get_def()))
+                worklist.push_back(i_arg);
+            if(!contains(visited, &t_arg.get_def()))
+                worklist.push_back(t_arg);
+            if(!contains(visited, &e_arg.get_def()))
+                worklist.push_back(e_arg);
             continue;
         }
         case node_kind::not_node:
