@@ -13,8 +13,8 @@
 
 #include <cassert>
 #include <initializer_list>
-#include <list>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 namespace eqbool {
@@ -72,12 +72,24 @@ struct node_def {
     node_def(node_kind kind, args_ref args, int sat_literal,
              eqbool_context &context);
 
-    bool operator == (const node_def &other) const;
-
     eqbool_context &get_context() const {
         assert(context);
         return *context;
     }
+
+    struct hasher {
+        template <class T>
+        static void hash(std::size_t &seed, const T &v) {
+            std::hash<T> h;
+            seed ^= h(v) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+        }
+
+        std::size_t operator () (const node_def &def) const;
+    };
+
+    struct matcher {
+        bool operator () (const node_def &a, const node_def &b) const;
+    };
 };
 
 }  // namespace detail
@@ -100,6 +112,7 @@ private:
     }
 
     friend class eqbool_context;
+    friend struct node_def::hasher;
 
 public:
     eqbool() = default;
@@ -109,7 +122,7 @@ public:
     bool is_const() const { return is_false() || is_true(); }
 
     bool operator == (const eqbool &other) const {
-        return get_def() == other.get_def();
+        return &get_def() == &other.get_def();
     }
 
     bool operator != (const eqbool &other) const {
@@ -157,7 +170,8 @@ private:
 
     int sat_literal_count = 0;
 
-    std::list<node_def> defs;
+    std::unordered_map<node_def, node_def*,
+                       node_def::hasher, node_def::matcher> defs;
 
     eqbool_stats stats;
 
@@ -206,6 +220,22 @@ inline detail::node_def::node_def(node_kind kind, args_ref args,
                                   int sat_literal, eqbool_context &context)
     : context(&context), kind(kind), args(args.begin(), args.end()),
       sat_literal(sat_literal) {}
+
+inline std::size_t
+detail::node_def::hasher::operator () (const node_def &def) const {
+    std::size_t h = 0;
+    hash(h, def.kind);
+    hash(h, def.term);
+    for(eqbool a : def.args)
+        hash(h, &a.get_def());
+    return h;
+}
+
+inline bool detail::node_def::matcher::operator () (const node_def &a,
+                                                    const node_def &b) const {
+    assert(&a.get_context() == &b.get_context());
+    return a.kind == b.kind && a.term == b.term && a.args == b.args;
+}
 
 inline bool eqbool::is_false() const {
     return get_context().is_false(*this);
