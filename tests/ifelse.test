@@ -7,3 +7,6 @@
 
 # IFELSE I 1 0 => I
 ! ? 2 2 1 0
+
+# IFELSE I A A => A
+! ? 3 2 3 3
