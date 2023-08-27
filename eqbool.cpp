@@ -37,20 +37,6 @@ bool contains(const C &c, const E &e) {
 
 }  // anonymous namespace
 
-bool node_def::operator == (const node_def &other) const {
-    assert(&get_context() == &other.get_context());
-
-    if(kind != other.kind || term != other.term)
-        return false;
-    if(args.size() != other.args.size())
-        return false;
-    for(size_t i = 0, e = args.size(); i != e; ++i) {
-        if(args[i] != other.args[i])
-            return false;
-    }
-    return true;
-}
-
 eqbool_context::eqbool_context() {
     assert(eqfalse.get_def().sat_literal == 1);
     assert(eqtrue.get_def().sat_literal == 2);
@@ -58,8 +44,16 @@ eqbool_context::eqbool_context() {
 }
 
 node_def &eqbool_context::get_def(const node_def &def) {
-    defs.push_back(def);
-    return defs.back();
+    // Store node definitions as keys in a hash table and map
+    // them to pointers to themselves.
+    auto r = defs.insert({def, nullptr});
+    auto &i = r.first;
+    node_def &key = const_cast<node_def&>(i->first);
+    node_def *&value = i->second;
+    bool inserted = r.second;
+    if(inserted)
+        value = &key;
+    return *value;
 }
 
 eqbool eqbool_context::get(const char *term) {
