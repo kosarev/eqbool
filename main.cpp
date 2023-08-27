@@ -133,18 +133,28 @@ private:
         nodes.push_back(e);
     }
 
+    template<typename T>
+    static std::string format(T n) {
+        // Using locale would require RTTI, which we want disabled.
+        std::string unit = std::to_string(n % 1000);
+        if(n < 1000)
+            return unit;
+        unit.insert(unit.begin(), 3 - unit.size(), '0');
+        return format(n / 1000) + " " + unit;
+    }
+
     void print_stats(std::ostream &s) const {
         const ::eqbool::eqbool_stats &stats = eqbools.get_stats();
         double other_time = total_time - (stats.sat_time + stats.clauses_time);
         s <<
-            line_no << ": " <<
-            static_cast<long>(total_time * 1000) << " ms, " <<
-            stats.num_sat_solutions << " solutions " <<
-            static_cast<long>(stats.sat_time * 1000) << " ms, " <<
-            stats.num_clauses << " clauses " <<
-            static_cast<long>(stats.clauses_time * 1000) << " ms, " <<
-            "other " << static_cast<long>(other_time * 1000) << " ms, " <<
-            ::mallinfo2().uordblks / 1024 << "K allocated\n";
+             line_no << ": " <<
+             format(static_cast<long>(total_time * 1000)) << " ms, " <<
+             format(stats.num_sat_solutions) << " solutions " <<
+             format(static_cast<long>(stats.sat_time * 1000)) << " ms, " <<
+             format(stats.num_clauses) << " clauses " <<
+             format(static_cast<long>(stats.clauses_time * 1000)) << " ms, " <<
+             "other " << format(static_cast<long>(other_time * 1000)) << " ms, " <<
+             format(::mallinfo2().uordblks / 1024) << "K allocated\n";
     }
 
     void print_stats() {
