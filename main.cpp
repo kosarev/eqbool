@@ -127,16 +127,26 @@ private:
         nodes.push_back(e);
     }
 
+    template<typename T>
+    static std::string format(T n) {
+        // Using locale would require RTTI, which we want disabled.
+        std::string unit = std::to_string(n % 1000);
+        if(n < 1000)
+            return unit;
+        unit.insert(unit.begin(), 3 - unit.size(), '0');
+        return format(n / 1000) + " " + unit;
+    }
+
     void print_stats() const {
         long cpu_time = 1000 * std::clock() / CLOCKS_PER_SEC;
         const ::eqbool::eqbool_stats &stats = eqbools.get_stats();
         std::cout <<
             "line " << line_no << ": " <<
-            cpu_time << " CPU ms, " <<
-            stats.sat_time << " SAT ms, " <<
-            stats.sat_solution_count << " solutions, " <<
-            stats.num_clauses << " clauses, " <<
-            ::mallinfo2().uordblks / 1024 << "K allocated\n";
+            format(cpu_time) << " CPU ms, " <<
+            format(stats.sat_time) << " SAT ms, " <<
+            format(stats.sat_solution_count) << " solutions, " <<
+            format(stats.num_clauses) << " clauses, " <<
+            format(::mallinfo2().uordblks / 1024) << "K allocated\n";
     }
 
 public:
