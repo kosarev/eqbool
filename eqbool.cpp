@@ -99,10 +99,10 @@ eqbool eqbool_context::get_eq(eqbool a, eqbool b) {
         return b;
     if(b.is_true())
         return a;
+    if(a.is_false())
+        return ~b;
     if(b.is_false())
         return ~a;
-    if(a.is_const() && b.is_const())
-        return get(a.is_false() == b.is_false());
 
     if(a == b)
         return eqtrue;
