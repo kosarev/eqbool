@@ -11,3 +11,6 @@
 # Non-simplifiable OR.
 . 4
 | 5 2 4
+
+# OR A A => A.
+! | 2 2 2

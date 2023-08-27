@@ -65,7 +65,7 @@ eqbool eqbool_context::get_or(args_ref args) {
     std::vector<eqbool> selected_args;
     for(eqbool a : args) {
         check(a);
-        if(a.is_false())
+        if(a.is_false() || contains(selected_args, a))
             continue;
         if(a.is_true() || contains(selected_args, ~a))
             return eqtrue;
