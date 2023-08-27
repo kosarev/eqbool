@@ -102,6 +102,9 @@ eqbool eqbool_context::get_eq(eqbool a, eqbool b) {
     if(a.is_const() && b.is_const())
         return get(a.is_false() == b.is_false());
 
+    if(a == b)
+        return eqtrue;
+
     // XOR gates take the same number of clauses with the same
     // number of literals as IFELSE gates, so it doesn't make
     // sense to have special support for them.
