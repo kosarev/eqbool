@@ -126,6 +126,9 @@ eqbool eqbool_context::ifelse(eqbool i, eqbool t, eqbool e) {
     if(t.is_true() && e.is_false())
         return i;
 
+    if(t == e)
+        return t;
+
     node_def def(node_kind::ifelse, {i, t, e},
                   get_sat_literal(), *this);
     return eqbool(get_def(def));
