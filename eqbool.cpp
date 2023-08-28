@@ -92,37 +92,20 @@ eqbool eqbool_context::get_and(args_ref args) {
     return ~get_or(or_args);
 }
 
-eqbool eqbool_context::get_eq(eqbool a, eqbool b) {
-    check(a);
-    check(b);
-
-    if(a.is_true())
-        return b;
-    if(b.is_true())
-        return a;
-    if(a.is_false())
-        return ~b;
-    if(b.is_false())
-        return ~a;
-
-    if(a == b)
-        return eqtrue;
-
-    // XOR gates take the same number of clauses with the same
-    // number of literals as IFELSE gates, so it doesn't make
-    // sense to have special support for them.
-    node_def def(node_kind::ifelse, {a, b, ~b},
-                 get_sat_literal(), *this);
-    return eqbool(add_def(def));
-}
-
 eqbool eqbool_context::ifelse(eqbool i, eqbool t, eqbool e) {
     check(i);
     check(t);
     check(e);
 
-    if(i == ~t)
+    if(i == t)
+        t = eqtrue;
+    else if(i == ~t)
         t = eqfalse;
+
+    if(i == e)
+        e = eqfalse;
+    else if(i == ~e)
+        e = eqtrue;
 
     if(i.is_const())
         return i.is_true() ? t : e;

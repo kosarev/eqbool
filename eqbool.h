@@ -226,8 +226,14 @@ public:
 
     eqbool get_or(args_ref args);
     eqbool get_and(args_ref args);
-    eqbool get_eq(eqbool a, eqbool b);
     eqbool ifelse(eqbool i, eqbool t, eqbool e);
+
+    eqbool get_eq(eqbool a, eqbool b) {
+        // XOR gates take the same number of clauses with the
+        // same number of literals as IFELSE gates, so it doesn't
+        // make sense to have special support for them.
+        return ifelse(a, b, ~b);
+    }
 
     eqbool invert(eqbool e) {
         check(e);
