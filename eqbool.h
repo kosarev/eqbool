@@ -145,6 +145,12 @@ public:
         return !(*this == other);
     }
 
+    // Defines an (implementation-defined) canonical order.
+    bool operator < (const eqbool &other) const {
+        assert(&get_context() == &other.get_context());
+        return def_code < other.def_code;
+    }
+
     eqbool operator ~ () const;
 
     std::ostream &dump(std::ostream &s) const;
