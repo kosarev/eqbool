@@ -57,7 +57,9 @@ public:
 
 namespace detail {
 
-enum class node_kind { none, or_node, ifelse, not_node };
+enum class node_kind { none, or_node, ifelse };
+
+constexpr uintptr_t inversion_flag = 1;
 
 struct node_def {
     eqbool_context *context = nullptr;
@@ -98,17 +100,30 @@ class eqbool {
 private:
     using node_def = detail::node_def;
 
-    const node_def *def = nullptr;
+    uintptr_t def_code = 0;
 
-    eqbool(const node_def &def) : def(&def) {}
+    eqbool(uintptr_t def_code)
+        : def_code(def_code) {}
+
+    eqbool(const node_def &def)
+            : eqbool(reinterpret_cast<uintptr_t>(&def)) {
+        assert(!is_inversion());
+    }
 
     const node_def &get_def() const {
-        assert(def);
-        return *def;
+        assert(!is_inversion());
+        assert(def_code);
+        return *reinterpret_cast<node_def*>(def_code);
+    }
+
+    bool is_inversion() const {
+        return def_code & detail::inversion_flag;
     }
 
     eqbool_context &get_context() const {
-        return get_def().get_context();
+        uintptr_t def = def_code & ~detail::inversion_flag;
+        assert(def);
+        return reinterpret_cast<node_def*>(def)->get_context();
     }
 
     friend class eqbool_context;
@@ -122,7 +137,8 @@ public:
     bool is_const() const { return is_false() || is_true(); }
 
     bool operator == (const eqbool &other) const {
-        return &get_def() == &other.get_def();
+        assert(&get_context() == &other.get_context());
+        return def_code == other.def_code;
     }
 
     bool operator != (const eqbool &other) const {
@@ -175,12 +191,12 @@ private:
 
     eqbool_stats stats;
 
-    eqbool eqfalse{get_def(node_def("0", get_sat_literal(), *this))};
-    eqbool eqtrue{get_def(node_def("1", get_sat_literal(), *this))};
+    eqbool eqfalse{add_def(node_def("0", get_sat_literal(), *this))};
+    eqbool eqtrue = ~eqfalse;
 
     int get_sat_literal() { return ++sat_literal_count; }
 
-    node_def &get_def(const node_def &def);
+    node_def &add_def(const node_def &def);
 
     void check(eqbool e) const {
         unused(&e);
@@ -206,7 +222,11 @@ public:
     eqbool get_and(args_ref args);
     eqbool get_eq(eqbool a, eqbool b);
     eqbool ifelse(eqbool i, eqbool t, eqbool e);
-    eqbool invert(eqbool e);
+
+    eqbool invert(eqbool e) {
+        check(e);
+        return eqbool(e.def_code ^ detail::inversion_flag);
+    }
 
     const eqbool_stats &get_stats() const { return stats; }
 
@@ -227,7 +247,7 @@ detail::node_def::hasher::operator () (const node_def &def) const {
     hash(h, def.kind);
     hash(h, def.term);
     for(eqbool a : def.args)
-        hash(h, &a.get_def());
+        hash(h, a.def_code);
     return h;
 }
 

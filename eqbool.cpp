@@ -40,11 +40,10 @@ bool contains(const C &c, const E &e) {
 
 eqbool_context::eqbool_context() {
     assert(eqfalse.get_def().sat_literal == 1);
-    assert(eqtrue.get_def().sat_literal == 2);
-    assert(sat_literal_count == 2);
+    assert(sat_literal_count == 1);
 }
 
-node_def &eqbool_context::get_def(const node_def &def) {
+node_def &eqbool_context::add_def(const node_def &def) {
     // Store node definitions as keys in a hash table and map
     // them to pointers to themselves.
     auto r = defs.insert({def, nullptr});
@@ -58,7 +57,7 @@ node_def &eqbool_context::get_def(const node_def &def) {
 }
 
 eqbool eqbool_context::get(const char *term) {
-    return eqbool(get_def(node_def(term, get_sat_literal(), *this)));
+    return eqbool(add_def(node_def(term, get_sat_literal(), *this)));
 }
 
 eqbool eqbool_context::get_or(args_ref args) {
@@ -79,7 +78,7 @@ eqbool eqbool_context::get_or(args_ref args) {
 
     node_def def(node_kind::or_node, selected_args,
                  get_sat_literal(), *this);
-    return eqbool(get_def(def));
+    return eqbool(add_def(def));
 }
 
 eqbool eqbool_context::get_and(args_ref args) {
@@ -112,7 +111,7 @@ eqbool eqbool_context::get_eq(eqbool a, eqbool b) {
     // sense to have special support for them.
     node_def def(node_kind::ifelse, {a, b, ~b},
                  get_sat_literal(), *this);
-    return eqbool(get_def(def));
+    return eqbool(add_def(def));
 }
 
 eqbool eqbool_context::ifelse(eqbool i, eqbool t, eqbool e) {
@@ -131,28 +130,16 @@ eqbool eqbool_context::ifelse(eqbool i, eqbool t, eqbool e) {
 
     node_def def(node_kind::ifelse, {i, t, e},
                   get_sat_literal(), *this);
-    return eqbool(get_def(def));
-}
-
-eqbool eqbool_context::invert(eqbool e) {
-    check(e);
-    if(e.is_const())
-        return get(!e.is_true());
-    if(e.get_def().kind == node_kind::not_node)
-        return e.get_def().args[0];
-
-    node_def def(node_kind::not_node, {e},
-                  get_sat_literal(), *this);
-    return eqbool(get_def(def));
+    return eqbool(add_def(def));
 }
 
 int eqbool_context::skip_not(eqbool &e) {
-    if(e.get_def().kind != node_kind::not_node)
-        return e.get_def().sat_literal;
+    if(e.is_inversion()) {
+        e = ~e;
+        return -e.get_def().sat_literal;
+    }
 
-    e = e.get_def().args[0];
-    assert(e.get_def().kind != node_kind::not_node);
-    return -e.get_def().sat_literal;
+    return e.get_def().sat_literal;
 }
 
 bool eqbool_context::is_unsat(eqbool e) {
@@ -172,20 +159,23 @@ bool eqbool_context::is_unsat(eqbool e) {
     while(!worklist.empty()) {
         eqbool n = worklist.back();
         worklist.pop_back();
-        visited.insert(&n.get_def());
 
-        int r_lit = n.get_def().sat_literal;
+        const node_def &def = n.get_def();
+        visited.insert(&def);
 
-        switch(n.get_def().kind) {
+        int r_lit = def.sat_literal;
+
+        switch(def.kind) {
         case node_kind::none:
             if(n.is_const()) {
-                solver->add(n.is_true() ? r_lit : -r_lit);
+                assert(n.is_false());
+                solver->add(-r_lit);
                 solver->add(0);
             }
             continue;
         case node_kind::or_node: {
             std::vector<int> arg_lits;
-            for(eqbool a : n.get_def().args) {
+            for(eqbool a : def.args) {
                 int a_lit = skip_not(a);
                 solver->add(-a_lit);
                 solver->add(r_lit);
@@ -202,12 +192,11 @@ bool eqbool_context::is_unsat(eqbool e) {
             solver->add(-r_lit);
             solver->add(0);
             ++stats.num_clauses;
-            continue;
-        }
+            continue; }
         case node_kind::ifelse: {
-            eqbool i_arg = n.get_def().args[0];
-            eqbool t_arg = n.get_def().args[1];
-            eqbool e_arg = n.get_def().args[2];
+            eqbool i_arg = def.args[0];
+            eqbool t_arg = def.args[1];
+            eqbool e_arg = def.args[2];
             int i_lit = skip_not(i_arg);
             int t_lit = skip_not(t_arg);
             int e_lit = skip_not(e_arg);
@@ -242,10 +231,7 @@ bool eqbool_context::is_unsat(eqbool e) {
                 worklist.push_back(t_arg);
             if(!contains(visited, &e_arg.get_def()))
                 worklist.push_back(e_arg);
-            continue;
-        }
-        case node_kind::not_node:
-            unreachable("unskipped NOT node encountered");
+            continue; }
         }
         unreachable("unknown node kind");
     }
@@ -270,24 +256,27 @@ bool eqbool_context::is_equiv(eqbool a, eqbool b) {
 
 std::ostream &eqbool_context::dump_helper(std::ostream &s, eqbool e,
                                           bool subexpr) const {
-    switch(e.get_def().kind) {
+    if(e.is_inversion()) {
+        s << "~";
+        dump_helper(s, ~e, /* subexpr= */ true);
+        return s;
+    }
+
+    const node_def &def = e.get_def();
+    switch(def.kind) {
     case node_kind::none:
-        return s << e.get_def().term;
+        return s << def.term;
     case node_kind::or_node:
     case node_kind::ifelse:
         if(subexpr)
             s << "(";
-        s << (e.get_def().kind == node_kind::or_node ? "or" : "ifelse");
-        for(eqbool a : e.get_def().args) {
+        s << (def.kind == node_kind::or_node ? "or" : "ifelse");
+        for(eqbool a : def.args) {
             s << " ";
             dump_helper(s, a, /* subexpr= */ true);
         }
         if(subexpr)
             s << ")";
-        return s;
-    case node_kind::not_node:
-        s << "~";
-        dump_helper(s, e.get_def().args[0], /* subexpr= */ true);
         return s;
     }
     unreachable("unknown node kind");
