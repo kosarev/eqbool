@@ -14,3 +14,6 @@
 
 # OR A A => A.
 ! | 2 2 2
+
+# The order of arguments should not matter.
+! | 5 4 2

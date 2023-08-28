@@ -76,6 +76,8 @@ eqbool eqbool_context::get_or(args_ref args) {
     if(selected_args.size() == 1)
         return selected_args[0];
 
+    std::sort(selected_args.begin(), selected_args.end());
+
     node_def def(node_kind::or_node, selected_args,
                  get_sat_literal(), *this);
     return eqbool(add_def(def));
