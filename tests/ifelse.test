@@ -10,3 +10,7 @@
 
 # IFELSE I A A => A
 ! ? 3 2 3 3
+
+# IFELSE A ~A 1 => ~A
+~ 6 3
+! ? 6 3 ~3 1
