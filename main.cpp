@@ -78,9 +78,24 @@ private:
             fatal("result node expected");
 
         std::vector<eqbool> args;
-        unsigned a;
-        while(s >> a)
+        for(;;) {
+            s >> std::ws;
+            if(s.peek() == '~') {
+                s.get();
+                unsigned a;
+                if(!(s >> a))
+                    fatal("argument expected after '~'");
+                args.push_back(~get_node(a));
+                continue;
+            }
+
+            unsigned a;
+            if(!(s >> a))
+                break;
+
             args.push_back(get_node(a));
+        }
+
         if(!s.eof())
             fatal("unexpected arguments");
 

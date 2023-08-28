@@ -119,14 +119,19 @@ eqbool eqbool_context::ifelse(eqbool i, eqbool t, eqbool e) {
     check(t);
     check(e);
 
+    if(i == ~t)
+        t = eqfalse;
+
     if(i.is_const())
         return i.is_true() ? t : e;
 
-    if(t.is_true() && e.is_false())
-        return i;
-
     if(t == e)
         return t;
+
+    if(t.is_const() && e.is_const()) {
+        assert(t != e);
+        return t.is_true() ? i : ~i;
+    }
 
     node_def def(node_kind::ifelse, {i, t, e},
                   get_sat_literal(), *this);
