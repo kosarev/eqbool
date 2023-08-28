@@ -257,6 +257,8 @@ bool eqbool_context::is_equiv(eqbool a, eqbool b) {
 std::ostream &eqbool_context::dump_helper(std::ostream &s, eqbool e,
                                           bool subexpr) const {
     if(e.is_inversion()) {
+        if(e.is_true())
+            return s << "1";
         s << "~";
         dump_helper(s, ~e, /* subexpr= */ true);
         return s;
