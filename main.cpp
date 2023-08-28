@@ -33,7 +33,7 @@ using eqbool::eqbool;
 class test_context {
 private:
     eqbool_context eqbools;
-    std::vector<eqbool> nodes;
+    std::unordered_map<unsigned, eqbool> nodes;
 
     std::string filepath;
     unsigned line_no = 0;
@@ -49,9 +49,10 @@ private:
     }
 
     eqbool get_node(unsigned i) const {
-        if(i >= nodes.size())
+        auto it = nodes.find(i);
+        if(it == nodes.end())
             fatal("undefined node");
-        return nodes[i];
+        return it->second;
     }
 
     void check_num_args(const std::vector<eqbool> &args, unsigned n) const {
@@ -130,7 +131,7 @@ private:
         size_t expected_r = nodes.size();
         if(r != expected_r)
             fatal("result node " + std::to_string(expected_r) + "expected");
-        nodes.push_back(e);
+        nodes[r] = e;
     }
 
     template<typename T>
@@ -172,8 +173,8 @@ public:
 
     test_context(std::string filepath, total_times_type &total_times)
             : filepath(filepath), total_times(total_times) {
-        nodes.push_back(eqbools.get_false());
-        nodes.push_back(eqbools.get_true());
+        nodes[0] = eqbools.get_false();
+        nodes[1] = eqbools.get_true();
     }
 
     void process_test_lines(std::istream &f) {
