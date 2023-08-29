@@ -118,6 +118,11 @@ eqbool eqbool_context::ifelse(eqbool i, eqbool t, eqbool e) {
         return t.is_true() ? i : ~i;
     }
 
+    if(i.is_inversion()) {
+        i = ~i;
+        std::swap(t, e);
+    }
+
     node_def def(node_kind::ifelse, {i, t, e},
                   get_sat_literal(), *this);
     return eqbool(add_def(def));
