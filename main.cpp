@@ -178,7 +178,7 @@ public:
             // std::cout << std::to_string(line_no) << ": " << line << "\n";
             if(!line.empty() && line[0] != '#')
                 process_test_line(line);
-            if(line_no % 10000 == 0)
+            if(line_no % 50000 == 0)
                 print_stats();
         }
 
