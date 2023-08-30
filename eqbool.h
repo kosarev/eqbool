@@ -66,13 +66,11 @@ struct node_def {
     node_kind kind = node_kind::none;
     std::string term;
     std::vector<eqbool> args;
-    int sat_literal = 0;
 
-    node_def(const char *term, int sat_literal, eqbool_context &context)
-        : context(&context), term(term), sat_literal(sat_literal) {}
+    node_def(const char *term, eqbool_context &context)
+        : context(&context), term(term) {}
 
-    node_def(node_kind kind, args_ref args, int sat_literal,
-             eqbool_context &context);
+    node_def(node_kind kind, args_ref args, eqbool_context &context);
 
     eqbool_context &get_context() const {
         assert(context);
@@ -190,17 +188,13 @@ class eqbool_context {
 private:
     using node_def = detail::node_def;
 
-    int sat_literal_count = 0;
-
     std::unordered_map<node_def, node_def*,
                        node_def::hasher, node_def::matcher> defs;
 
     eqbool_stats stats;
 
-    eqbool eqfalse{add_def(node_def("0", get_sat_literal(), *this))};
+    eqbool eqfalse{add_def(node_def("0", *this))};
     eqbool eqtrue = ~eqfalse;
-
-    int get_sat_literal() { return ++sat_literal_count; }
 
     node_def &add_def(const node_def &def);
 
@@ -209,12 +203,13 @@ private:
         assert(&e.get_context() == this);
     }
 
-    int skip_not(eqbool &e);
+    int skip_not(eqbool &e,
+                 std::unordered_map<const node_def*, int> &literals);
 
     std::ostream &dump_helper(std::ostream &s, eqbool e, bool subexpr) const;
 
 public:
-    eqbool_context();
+    eqbool_context() = default;
 
     bool is_false(eqbool e) const { check(e); return e == eqfalse; }
     bool is_true(eqbool e) const { check(e); return e == eqtrue; }
@@ -249,9 +244,9 @@ public:
 };
 
 inline detail::node_def::node_def(node_kind kind, args_ref args,
-                                  int sat_literal, eqbool_context &context)
-    : context(&context), kind(kind), args(args.begin(), args.end()),
-      sat_literal(sat_literal) {}
+                                  eqbool_context &context)
+    : context(&context), kind(kind), args(args.begin(), args.end())
+{}
 
 inline std::size_t
 detail::node_def::hasher::operator () (const node_def &def) const {

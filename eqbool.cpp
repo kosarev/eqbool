@@ -38,11 +38,6 @@ bool contains(const C &c, const E &e) {
 
 }  // anonymous namespace
 
-eqbool_context::eqbool_context() {
-    assert(eqfalse.get_def().sat_literal == 1);
-    assert(sat_literal_count == 1);
-}
-
 node_def &eqbool_context::add_def(const node_def &def) {
     // Store node definitions as keys in a hash table and map
     // them to pointers to themselves.
@@ -57,7 +52,7 @@ node_def &eqbool_context::add_def(const node_def &def) {
 }
 
 eqbool eqbool_context::get(const char *term) {
-    return eqbool(add_def(node_def(term, get_sat_literal(), *this)));
+    return eqbool(add_def(node_def(term, *this)));
 }
 
 eqbool eqbool_context::get_or(args_ref args) {
@@ -78,8 +73,7 @@ eqbool eqbool_context::get_or(args_ref args) {
 
     std::sort(selected_args.begin(), selected_args.end());
 
-    node_def def(node_kind::or_node, selected_args,
-                 get_sat_literal(), *this);
+    node_def def(node_kind::or_node, selected_args, *this);
     return eqbool(add_def(def));
 }
 
@@ -123,18 +117,26 @@ eqbool eqbool_context::ifelse(eqbool i, eqbool t, eqbool e) {
         std::swap(t, e);
     }
 
-    node_def def(node_kind::ifelse, {i, t, e},
-                  get_sat_literal(), *this);
+    node_def def(node_kind::ifelse, {i, t, e}, *this);
     return eqbool(add_def(def));
 }
 
-int eqbool_context::skip_not(eqbool &e) {
+static int get_literal(const node_def *def,
+        std::unordered_map<const node_def*, int> &literals) {
+    int &lit = literals[def];
+    if(lit == 0)
+        lit = static_cast<int>(literals.size()) + 1;
+    return lit;
+}
+
+int eqbool_context::skip_not(eqbool &e,
+        std::unordered_map<const node_def*, int> &literals) {
     if(e.is_inversion()) {
         e = ~e;
-        return -e.get_def().sat_literal;
+        return -get_literal(&e.get_def(), literals);
     }
 
-    return e.get_def().sat_literal;
+    return get_literal(&e.get_def(), literals);
 }
 
 bool eqbool_context::is_unsat(eqbool e) {
@@ -146,7 +148,8 @@ bool eqbool_context::is_unsat(eqbool e) {
     {
     timer t(stats.clauses_time);
 
-    solver->add(skip_not(e));
+    std::unordered_map<const node_def*, int> literals;
+    solver->add(skip_not(e, literals));
     solver->add(0);
     ++stats.num_clauses;
 
@@ -161,7 +164,8 @@ bool eqbool_context::is_unsat(eqbool e) {
         if(!inserted)
             continue;
 
-        int r_lit = def.sat_literal;
+        int r_lit = literals[&def];
+        assert(r_lit != 0);
 
         switch(def.kind) {
         case node_kind::none:
@@ -175,7 +179,7 @@ bool eqbool_context::is_unsat(eqbool e) {
         case node_kind::or_node: {
             std::vector<int> arg_lits;
             for(eqbool a : def.args) {
-                int a_lit = skip_not(a);
+                int a_lit = skip_not(a, literals);
                 solver->add(-a_lit);
                 solver->add(r_lit);
                 solver->add(0);
@@ -195,9 +199,9 @@ bool eqbool_context::is_unsat(eqbool e) {
             eqbool i_arg = def.args[0];
             eqbool t_arg = def.args[1];
             eqbool e_arg = def.args[2];
-            int i_lit = skip_not(i_arg);
-            int t_lit = skip_not(t_arg);
-            int e_lit = skip_not(e_arg);
+            int i_lit = skip_not(i_arg, literals);
+            int t_lit = skip_not(t_arg, literals);
+            int e_lit = skip_not(e_arg, literals);
 
             solver->add(-i_lit);
             solver->add(t_lit);
