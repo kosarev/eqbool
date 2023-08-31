@@ -112,10 +112,11 @@ eqbool eqbool_context::ifelse(eqbool i, eqbool t, eqbool e) {
         return t.is_true() ? i : ~i;
     }
 
-    if(i.is_inversion()) {
-        i = ~i;
-        std::swap(t, e);
-    }
+    if(t == ~e && t < i)
+        std::tie(i, t, e) = std::make_tuple(t, i, ~i);
+
+    if(i.is_inversion())
+        std::tie(i, t, e) = std::make_tuple(~i, e, t);
 
     node_def def(node_kind::ifelse, {i, t, e}, *this);
     return eqbool(add_def(def));
