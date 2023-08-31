@@ -156,7 +156,9 @@ bool eqbool_context::is_unsat(eqbool e) {
         worklist.pop_back();
 
         const node_def &def = n.get_def();
-        visited.insert(&def);
+        bool inserted = visited.insert(&def).second;
+        if(!inserted)
+            continue;
 
         int r_lit = def.sat_literal;
 
@@ -178,8 +180,7 @@ bool eqbool_context::is_unsat(eqbool e) {
                 ++stats.num_clauses;
 
                 arg_lits.push_back(a_lit);
-                if(!contains(visited, &a.get_def()))
-                    worklist.push_back(a);
+                worklist.push_back(a);
             }
 
             for(int a_lit : arg_lits)
@@ -220,12 +221,9 @@ bool eqbool_context::is_unsat(eqbool e) {
             solver->add(0);
             ++stats.num_clauses;
 
-            if(!contains(visited, &i_arg.get_def()))
-                worklist.push_back(i_arg);
-            if(!contains(visited, &t_arg.get_def()))
-                worklist.push_back(t_arg);
-            if(!contains(visited, &e_arg.get_def()))
-                worklist.push_back(e_arg);
+            worklist.push_back(i_arg);
+            worklist.push_back(t_arg);
+            worklist.push_back(e_arg);
             continue; }
         }
         unreachable("unknown node kind");
