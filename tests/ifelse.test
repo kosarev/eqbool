@@ -17,3 +17,7 @@
 
 # IFELSE A B C is IFELSE ~A C B.
 ! ? R ~A C B
+
+# IFELSE A B ~B is IFELSE B A ~A (because both are EQ A B).
+? R2 A B ~B
+! ? R2 B A ~A
