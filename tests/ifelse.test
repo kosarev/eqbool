@@ -1,19 +1,19 @@
 ! ? 1 1 1 0
 
-. 2
-. 3
-. 4
-? 5 2 3 4
+. A
+. B
+. C
+? R A B C
 
-# IFELSE I 1 0 => I
-! ? 2 2 1 0
+# IFELSE A 1 0 => A
+! ? A A 1 0
 
-# IFELSE I A A => A
-! ? 3 2 3 3
+# IFELSE A B B => B
+! ? B A B B
 
 # IFELSE A ~A 1 => ~A
-~ 6 3
-! ? 6 3 ~3 1
+~ 6 B
+! ? 6 B ~B 1
 
-# IFELSE I A B is IFELSE ~I B A.
-! ? 5 ~2 4 3
+# IFELSE A B C is IFELSE ~A C B.
+! ? R ~A C B

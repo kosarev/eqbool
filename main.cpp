@@ -31,7 +31,7 @@ using eqbool::eqbool;
 class test_context {
 private:
     eqbool_context eqbools;
-    std::unordered_map<unsigned, eqbool> nodes;
+    std::unordered_map<std::string, eqbool> nodes;
 
     std::string filepath;
     unsigned line_no = 0;
@@ -44,10 +44,10 @@ private:
         fatal(msg.str());
     }
 
-    eqbool get_node(unsigned i) const {
-        auto it = nodes.find(i);
+    eqbool get_node(std::string id) const {
+        auto it = nodes.find(id);
         if(it == nodes.end())
-            fatal("undefined node");
+            fatal("undefined node '" + id + "'");
         return it->second;
     }
 
@@ -69,7 +69,7 @@ private:
             assert = true;
         }
 
-        unsigned r = 0;
+        std::string r;
         if(!(s >> r))
             fatal("result node expected");
 
@@ -78,14 +78,14 @@ private:
             s >> std::ws;
             if(s.peek() == '~') {
                 s.get();
-                unsigned a;
+                std::string a;
                 if(!(s >> a))
                     fatal("argument expected after '~'");
                 args.push_back(~get_node(a));
                 continue;
             }
 
-            unsigned a;
+            std::string a;
             if(!(s >> a))
                 break;
 
@@ -98,7 +98,7 @@ private:
         eqbool e;
         if(op == '.') {
             check_num_args(args, 0);
-            e = eqbools.get(std::to_string(r).c_str());
+            e = eqbools.get(r.c_str());
         } else if(op == '|') {
             e = eqbools.get_or(args);
         } else if(op == '&') {
@@ -114,10 +114,10 @@ private:
             e = ~args[0];
         } else if(op == 'q') {
             check_num_args(args, 2);
-            if(r != 0 && r != 1)
+            if(r != "0" && r != "1")
                 fatal("constant result expected");
             unsigned long count = eqbools.get_stats().sat_solution_count;
-            if(eqbools.is_equiv(args[0], args[1]) != static_cast<bool>(r))
+            if(eqbools.is_equiv(args[0], args[1]) != (r == "1"))
                 fatal("equivalence check failed");
             if(assert && eqbools.get_stats().sat_solution_count == count)
                 fatal("equivlance check resolved without using SAT solver");
@@ -137,9 +137,8 @@ private:
             return;
         }
 
-        size_t expected_r = nodes.size();
-        if(r != expected_r)
-            fatal("result node " + std::to_string(expected_r) + "expected");
+        if(nodes.find(r) != nodes.end())
+            fatal("result is already defined");
         nodes[r] = e;
     }
 
@@ -167,8 +166,8 @@ private:
 
 public:
     test_context(std::string filepath) : filepath(filepath) {
-        nodes[0] = eqbools.get_false();
-        nodes[1] = eqbools.get_true();
+        nodes["0"] = eqbools.get_false();
+        nodes["1"] = eqbools.get_true();
     }
 
     void process_test_lines(std::istream &f) {
