@@ -148,6 +148,7 @@ bool eqbool_context::is_unsat(eqbool e) {
 
     solver->add(skip_not(e));
     solver->add(0);
+    ++stats.num_clauses;
 
     std::vector<eqbool> worklist({e});
     std::unordered_set<const node_def*> visited;
@@ -168,6 +169,7 @@ bool eqbool_context::is_unsat(eqbool e) {
                 assert(n.is_false());
                 solver->add(-r_lit);
                 solver->add(0);
+                ++stats.num_clauses;
             }
             continue;
         case node_kind::or_node: {
