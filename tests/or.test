@@ -23,3 +23,7 @@
 . B
 & AB A B
 ! | A A AB
+
+# OR A (OR ~A B) => 1.
+| NA_B ~A B
+! | 1 A NA_B
