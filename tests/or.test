@@ -17,3 +17,9 @@
 
 # The order of arguments should not matter.
 ! | 5 4 2
+
+# OR A (AND A B) => A.
+. A
+. B
+& AB A B
+! | A A AB
