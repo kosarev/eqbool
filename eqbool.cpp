@@ -64,7 +64,15 @@ eqbool eqbool_context::get_or(args_ref args) {
         if(a.is_true() || contains(selected_args, ~a))
             return eqtrue;
 
-        if(a.is_inversion()) {
+        if(!a.is_inversion()) {
+            const node_def &def = a.get_def();
+            if(def.kind == node_kind::or_node) {
+                for(eqbool b : def.args) {
+                    if(contains(selected_args, ~b))
+                        return eqtrue;
+                }
+            }
+        } else {
             const node_def &def = (~a).get_def();
             if(def.kind == node_kind::or_node) {
                 bool skip = false;
