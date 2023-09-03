@@ -21,3 +21,9 @@
 # IFELSE A B ~B is IFELSE B A ~A (because both are EQ A B).
 ? R2 A B ~B
 ! ? R2 B A ~A
+
+# IFELSE A B (IFELSE A C D) => IFELSE A B D.
+. D
+? IF_ACD A C D
+? IF_ABD A B D
+! ? IF_ABD A B IF_ACD
