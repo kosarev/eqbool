@@ -206,7 +206,9 @@ private:
     int skip_not(eqbool &e,
                  std::unordered_map<const node_def*, int> &literals);
 
-    std::ostream &dump_helper(std::ostream &s, eqbool e, bool subexpr) const;
+    std::ostream &dump_helper(std::ostream &s, eqbool e, bool subexpr,
+        const std::unordered_map<const node_def*, unsigned> &ids,
+        std::vector<eqbool> &worklist) const;
 
 public:
     eqbool_context() = default;

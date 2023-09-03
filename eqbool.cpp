@@ -278,13 +278,15 @@ bool eqbool_context::is_equiv(eqbool a, eqbool b) {
     return is_unsat(~get_eq(a, b));
 }
 
-std::ostream &eqbool_context::dump_helper(std::ostream &s, eqbool e,
-                                          bool subexpr) const {
+std::ostream &eqbool_context::dump_helper(
+        std::ostream &s, eqbool e, bool subexpr,
+        const std::unordered_map<const node_def*, unsigned> &ids,
+        std::vector<eqbool> &worklist) const {
     if(e.is_inversion()) {
         if(e.is_true())
             return s << "1";
         s << "~";
-        dump_helper(s, ~e, /* subexpr= */ true);
+        dump_helper(s, ~e, /* subexpr= */ true, ids, worklist);
         return s;
     }
 
@@ -294,12 +296,19 @@ std::ostream &eqbool_context::dump_helper(std::ostream &s, eqbool e,
         return s << def.term;
     case node_kind::or_node:
     case node_kind::ifelse:
+        if(subexpr) {
+            auto i = ids.find(&def);
+            if(i != ids.end()) {
+                worklist.push_back(e);
+                return s << "t" << i->second;
+            }
+        }
         if(subexpr)
             s << "(";
         s << (def.kind == node_kind::or_node ? "or" : "ifelse");
         for(eqbool a : def.args) {
             s << " ";
-            dump_helper(s, a, /* subexpr= */ true);
+            dump_helper(s, a, /* subexpr= */ true, ids, worklist);
         }
         if(subexpr)
             s << ")";
@@ -309,7 +318,55 @@ std::ostream &eqbool_context::dump_helper(std::ostream &s, eqbool e,
 }
 
 std::ostream &eqbool_context::dump(std::ostream &s, eqbool e) const {
-    return dump_helper(s, e, /* subexpr= */ false);
+    // Collect common subexpressions.
+    std::unordered_set<const node_def*> seen;
+    std::unordered_map<const node_def*, unsigned> ids;
+    std::vector<eqbool> worklist{e};
+    while(!worklist.empty()) {
+        eqbool n = worklist.back();
+        worklist.pop_back();
+
+        if(n.is_inversion())
+            n = ~n;
+
+        const node_def *def = &n.get_def();
+        switch(def->kind) {
+        case node_kind::none:
+            continue;
+        case node_kind::or_node:
+        case node_kind::ifelse:
+            bool inserted = seen.insert(def).second;
+            if(!inserted) {
+                unsigned &id = ids[def];
+                if(!id)
+                    id = static_cast<unsigned>(ids.size());
+                continue;
+            }
+
+            for(eqbool a : def->args)
+                worklist.push_back(a);
+            continue;
+        }
+        unreachable("unknown node kind");
+    }
+
+    dump_helper(s, e, /* subexpr= */ false, ids, worklist);
+
+    seen.clear();
+    while(!worklist.empty()) {
+        eqbool n = worklist.back();
+        worklist.pop_back();
+
+        const node_def *def = &n.get_def();
+        bool inserted = seen.insert(def).second;
+        if(!inserted)
+            continue;
+
+        s << "; t" << ids[def] << " = ";
+        dump_helper(s, n, /* subexpr= */ false, ids, worklist);
+    }
+
+    return s;
 }
 
 }  // namesapce eqbool
