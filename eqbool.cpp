@@ -115,6 +115,12 @@ eqbool eqbool_context::ifelse(eqbool i, eqbool t, eqbool e) {
     check(t);
     check(e);
 
+    if(!e.is_inversion()) {
+        const node_def &def = e.get_def();
+        if(def.kind == node_kind::ifelse && def.args[0] == i)
+            e = def.args[2];
+    }
+
     if(i == t)
         t = eqtrue;
     else if(i == ~t)
