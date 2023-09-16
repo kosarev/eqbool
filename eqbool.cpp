@@ -288,12 +288,18 @@ std::ostream &eqbool_context::dump_helper(
         std::ostream &s, eqbool e, bool subexpr,
         const std::unordered_map<const node_def*, unsigned> &ids,
         std::vector<eqbool> &worklist) const {
+    bool is_and = false;
     if(e.is_inversion()) {
         if(e.is_true())
             return s << "1";
-        s << "~";
-        dump_helper(s, ~e, /* subexpr= */ true, ids, worklist);
-        return s;
+        if((~e).get_def().kind == node_kind::or_node) {
+            is_and = true;
+            e = ~e;
+        } else {
+            s << "~";
+            dump_helper(s, ~e, /* subexpr= */ true, ids, worklist);
+            return s;
+        }
     }
 
     const node_def &def = e.get_def();
@@ -311,9 +317,13 @@ std::ostream &eqbool_context::dump_helper(
         }
         if(subexpr)
             s << "(";
-        s << (def.kind == node_kind::or_node ? "or" : "ifelse");
+        s << (is_and ? "and" :
+              def.kind == node_kind::or_node ? "or" :
+              "ifelse");
         for(eqbool a : def.args) {
             s << " ";
+            if(is_and)
+                a = ~a;
             dump_helper(s, a, /* subexpr= */ true, ids, worklist);
         }
         if(subexpr)
