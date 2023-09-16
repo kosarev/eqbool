@@ -133,6 +133,7 @@ public:
     }
 
     eqbool operator ~ () const;
+    eqbool operator & (eqbool other) const;
 
     std::ostream &dump(std::ostream &s) const;
 };
@@ -208,6 +209,7 @@ public:
 
     eqbool get_or(args_ref args);
     eqbool get_and(args_ref args);
+    eqbool get_and(eqbool a, eqbool b) { return get_and({a, b}); }
     eqbool ifelse(eqbool i, eqbool t, eqbool e);
 
     eqbool get_eq(eqbool a, eqbool b) {
@@ -261,6 +263,10 @@ inline bool eqbool::is_true() const {
 
 inline eqbool eqbool::operator ~ () const {
     return get_context().invert(*this);
+}
+
+inline eqbool eqbool::operator & (eqbool other) const {
+    return get_context().get_and(*this, other);
 }
 
 inline std::ostream &eqbool::dump(std::ostream &s) const {

@@ -32,3 +32,7 @@
 | (A|B) A B
 ? IF_(A|B)_C_0 (A|B) C 0
 ! ? IF_(A|B)_C_0 (A|B) C B
+
+# IFELSE A B 0 => AND A B.
+& AB A B
+! ? AB A B 0
