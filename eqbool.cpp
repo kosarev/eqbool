@@ -86,14 +86,21 @@ eqbool eqbool_context::get_or(args_ref args) {
         if(a.is_inversion()) {
             const node_def &def = (~a).get_def();
             if(def.kind == node_kind::or_node) {
-                bool skip = false;
+                bool or_is_true = false;
+                bool or_is_false = true;
                 for(eqbool b : def.args) {
+                    if(!contains(flattened_args, b))
+                        or_is_false = false;
                     if(contains(flattened_args, ~b)) {
-                        skip = true;
+                        or_is_true = true;
                         break;
                     }
                 }
-                if(skip)
+                bool a_is_true = or_is_false;
+                if(a_is_true)
+                    return eqtrue;
+                bool a_is_false = or_is_true;
+                if(a_is_false)
                     continue;
             }
         }
@@ -347,6 +354,8 @@ std::ostream &eqbool_context::dump_helper(
             auto i = ids.find(&def);
             if(i != ids.end()) {
                 worklist.push_back(e);
+                if(is_and)
+                    s << "~";
                 return s << "t" << i->second;
             }
         }

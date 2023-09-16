@@ -28,3 +28,7 @@
 # OR A (OR ~A B) => 1.
 | NA_B ~A B
 ! | 1 A NA_B
+
+# AND A B (OR ~A ~B) => 0.
+| (~A|~B) ~A ~B
+! & 0 A B (~A|~B)
