@@ -121,6 +121,16 @@ eqbool eqbool_context::simplify(eqbool p, eqbool e) {
         }
     }
 
+    if(e.is_inversion()) {
+        const node_def &def = (~e).get_def();
+        if(def.kind == node_kind::or_node) {
+            for(const eqbool &a : def.args) {
+                if(a == p)
+                    return eqfalse;
+            }
+        }
+    }
+
     return e;
 }
 

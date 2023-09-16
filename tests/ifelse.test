@@ -36,3 +36,7 @@
 # IFELSE A B 0 => AND A B.
 & AB A B
 ! ? AB A B 0
+
+# IFELSE A B (AND A B) => IFELSE A B 0 => AND A B.
+? IF_A_B_AB A B AB
+! ? AB A B AB
