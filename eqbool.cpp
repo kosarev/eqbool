@@ -110,10 +110,26 @@ eqbool eqbool_context::get_and(args_ref args) {
     return ~get_or(or_args);
 }
 
+eqbool eqbool_context::simplify(eqbool p, eqbool e) {
+    if(p.is_inversion()) {
+        const node_def &def = (~p).get_def();
+        if(def.kind == node_kind::or_node) {
+            for(const eqbool &a : def.args) {
+                if(a == e)
+                    return eqfalse;
+            }
+        }
+    }
+
+    return e;
+}
+
 eqbool eqbool_context::ifelse(eqbool i, eqbool t, eqbool e) {
     check(i);
     check(t);
     check(e);
+
+    e = simplify(~i, e);
 
     if(!e.is_inversion()) {
         const node_def &def = e.get_def();

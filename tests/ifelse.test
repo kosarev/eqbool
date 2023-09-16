@@ -27,3 +27,8 @@
 ? IF_ACD A C D
 ? IF_ABD A B D
 ! ? IF_ABD A B IF_ACD
+
+# IFELSE (OR A B) C B => IFELSE (OR A B) C 0.
+| (A|B) A B
+? IF_(A|B)_C_0 (A|B) C 0
+! ? IF_(A|B)_C_0 (A|B) C B
