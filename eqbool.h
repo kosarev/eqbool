@@ -206,6 +206,9 @@ private:
     int skip_not(eqbool &e,
                  std::unordered_map<const node_def*, int> &literals);
 
+    // Attempts to simplify e given p is true.
+    eqbool simplify(eqbool p, eqbool e);
+
     std::ostream &dump_helper(std::ostream &s, eqbool e, bool subexpr,
         const std::unordered_map<const node_def*, unsigned> &ids,
         std::vector<eqbool> &worklist) const;
