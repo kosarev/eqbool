@@ -56,28 +56,39 @@ eqbool eqbool_context::get(const char *term) {
 }
 
 eqbool eqbool_context::get_or(args_ref args) {
-    std::vector<eqbool> selected_args;
-    for(eqbool a : args) {
-        check(a);
-        if(a.is_false() || contains(selected_args, a))
+    check(args);
+
+    std::vector<eqbool> worklist(args.begin(), args.end());
+    std::vector<eqbool> flattened_args;
+    while(!worklist.empty()) {
+        eqbool a = worklist.back();
+        worklist.pop_back();
+
+        if(a.is_false() || contains(flattened_args, a))
             continue;
-        if(a.is_true() || contains(selected_args, ~a))
+        if(a.is_true() || contains(flattened_args, ~a))
             return eqtrue;
 
         if(!a.is_inversion()) {
             const node_def &def = a.get_def();
             if(def.kind == node_kind::or_node) {
-                for(eqbool b : def.args) {
-                    if(contains(selected_args, ~b))
-                        return eqtrue;
-                }
+                worklist.insert(worklist.end(),
+                                def.args.begin(), def.args.end());
+                continue;
             }
-        } else {
+        }
+
+        flattened_args.push_back(a);
+    }
+
+    unsigned i = 0;
+    for(eqbool a : flattened_args) {
+        if(a.is_inversion()) {
             const node_def &def = (~a).get_def();
             if(def.kind == node_kind::or_node) {
                 bool skip = false;
                 for(eqbool b : def.args) {
-                    if(contains(selected_args, ~b)) {
+                    if(contains(flattened_args, ~b)) {
                         skip = true;
                         break;
                     }
@@ -87,17 +98,18 @@ eqbool eqbool_context::get_or(args_ref args) {
             }
         }
 
-        selected_args.push_back(a);
+        flattened_args[i++] = a;
     }
+    flattened_args.resize(i);
 
-    if(selected_args.empty())
+    if(flattened_args.empty())
         return eqfalse;
-    if(selected_args.size() == 1)
-        return selected_args[0];
+    if(flattened_args.size() == 1)
+        return flattened_args[0];
 
-    std::sort(selected_args.begin(), selected_args.end());
+    std::sort(flattened_args.begin(), flattened_args.end());
 
-    node_def def(node_kind::or_node, selected_args, *this);
+    node_def def(node_kind::or_node, flattened_args, *this);
     return eqbool(add_def(def));
 }
 

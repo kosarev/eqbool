@@ -186,6 +186,11 @@ private:
         assert(&e.get_context() == this);
     }
 
+    void check(args_ref args) const {
+        for(eqbool a : args)
+            check(a);
+    }
+
     int skip_not(eqbool &e,
                  std::unordered_map<const node_def*, int> &literals);
 
