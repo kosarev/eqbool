@@ -61,62 +61,62 @@ eqbool eqbool_context::get_or(args_ref args) {
     std::vector<eqbool> worklist(args.begin(), args.end());
     std::vector<eqbool> flattened_args;
     while(!worklist.empty()) {
-    while(!worklist.empty()) {
-        eqbool a = worklist.back();
-        worklist.pop_back();
+        while(!worklist.empty()) {
+            eqbool a = worklist.back();
+            worklist.pop_back();
 
-        if(a.is_false() || contains(flattened_args, a))
-            continue;
-        if(a.is_true() || contains(flattened_args, ~a))
-            return eqtrue;
-
-        if(!a.is_inversion()) {
-            const node_def &def = a.get_def();
-            if(def.kind == node_kind::or_node) {
-                worklist.insert(worklist.end(),
-                                def.args.begin(), def.args.end());
+            if(a.is_false() || contains(flattened_args, a))
                 continue;
+            if(a.is_true() || contains(flattened_args, ~a))
+                return eqtrue;
+
+            if(!a.is_inversion()) {
+                const node_def &def = a.get_def();
+                if(def.kind == node_kind::or_node) {
+                    worklist.insert(worklist.end(),
+                                    def.args.begin(), def.args.end());
+                    continue;
+                }
             }
+
+            flattened_args.push_back(a);
         }
 
-        flattened_args.push_back(a);
-    }
-
-    unsigned i = 0;
-    for(eqbool a : flattened_args) {
-        if(a.is_inversion()) {
-            const node_def &def = (~a).get_def();
-            if(def.kind == node_kind::or_node) {
-                bool or_is_true = false;
-                unsigned num_or_args = 0;
-                eqbool last_or_arg;
-                for(eqbool b : def.args) {
-                    if(contains(flattened_args, b))
-                        continue;
-                    if(contains(flattened_args, ~b)) {
-                        or_is_true = true;
-                        break;
+        unsigned i = 0;
+        for(eqbool a : flattened_args) {
+            if(a.is_inversion()) {
+                const node_def &def = (~a).get_def();
+                if(def.kind == node_kind::or_node) {
+                    bool or_is_true = false;
+                    unsigned num_or_args = 0;
+                    eqbool last_or_arg;
+                    for(eqbool b : def.args) {
+                        if(contains(flattened_args, b))
+                            continue;
+                        if(contains(flattened_args, ~b)) {
+                            or_is_true = true;
+                            break;
+                        }
+                        last_or_arg = b;
+                        ++num_or_args;
                     }
-                    last_or_arg = b;
-                    ++num_or_args;
-                }
-                bool a_is_false = or_is_true;
-                if(a_is_false)
-                    continue;
-                bool or_is_false = (num_or_args == 0);
-                bool a_is_true = or_is_false;
-                if(a_is_true)
-                    return eqtrue;
-                if(num_or_args == 1) {
-                    worklist.push_back(~last_or_arg);
-                    continue;
+                    bool a_is_false = or_is_true;
+                    if(a_is_false)
+                        continue;
+                    bool or_is_false = (num_or_args == 0);
+                    bool a_is_true = or_is_false;
+                    if(a_is_true)
+                        return eqtrue;
+                    if(num_or_args == 1) {
+                        worklist.push_back(~last_or_arg);
+                        continue;
+                    }
                 }
             }
-        }
 
-        flattened_args[i++] = a;
-    }
-    flattened_args.resize(i);
+            flattened_args[i++] = a;
+        }
+        flattened_args.resize(i);
     }
 
     if(flattened_args.empty())
