@@ -25,6 +25,11 @@
 ! | A A AB
 ! | A AB A
 
+# OR A (AND B ~A) => OR A B.
+| (A|B) A B
+& (B&~A) B ~A
+! | (A|B) A (B&~A)
+
 # OR A (OR ~A B) => 1.
 | NA_B ~A B
 ! | 1 A NA_B
