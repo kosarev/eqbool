@@ -61,6 +61,7 @@ eqbool eqbool_context::get_or(args_ref args) {
     std::vector<eqbool> worklist(args.begin(), args.end());
     std::vector<eqbool> flattened_args;
     while(!worklist.empty()) {
+    while(!worklist.empty()) {
         eqbool a = worklist.back();
         worklist.pop_back();
 
@@ -106,14 +107,17 @@ eqbool eqbool_context::get_or(args_ref args) {
                 bool a_is_true = or_is_false;
                 if(a_is_true)
                     return eqtrue;
-                if(num_or_args == 1)
-                    a = ~last_or_arg;
+                if(num_or_args == 1) {
+                    worklist.push_back(~last_or_arg);
+                    continue;
+                }
             }
         }
 
         flattened_args[i++] = a;
     }
     flattened_args.resize(i);
+    }
 
     if(flattened_args.empty())
         return eqfalse;
