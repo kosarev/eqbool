@@ -341,6 +341,8 @@ std::ostream &eqbool_context::dump_helper(
             auto i = ids.find(&def);
             if(i != ids.end()) {
                 worklist.push_back(e);
+                if(is_and)
+                    s << "~";
                 return s << "t" << i->second;
             }
         }
