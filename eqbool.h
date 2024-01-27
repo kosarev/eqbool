@@ -36,6 +36,23 @@ static inline void unused(...) {}
 #endif
 }
 
+class timer {
+private:
+    static double now() {
+        timespec t;
+        ::clock_gettime(CLOCK_MONOTONIC, &t);
+        return static_cast<double>(t.tv_sec) +
+               static_cast<double>(t.tv_nsec) / 1e9;
+    }
+
+    double start = now();
+    double &total;
+
+public:
+    timer(double &total) : total(total) {}
+    ~timer() { total += now() - start; }
+};
+
 class eqbool {
 private:
     enum class node_kind { none, or_node, ifelse, not_node };
@@ -101,8 +118,9 @@ public:
 };
 
 struct eqbool_stats {
-    long sat_time = 0;
-    unsigned long sat_solution_count = 0;
+    double sat_time = 0;
+    double clauses_time = 0;
+    unsigned long num_sat_solutions = 0;
     unsigned long num_clauses = 0;
 };
 

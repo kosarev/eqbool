@@ -36,6 +36,8 @@ private:
     std::string filepath;
     unsigned line_no = 0;
 
+    double total_time = 0;
+
     [[noreturn]] void fatal(std::string msg) const {
         ::fatal(filepath + ": " + std::to_string(line_no) + ": " + msg);
     }
@@ -79,6 +81,8 @@ private:
         if(!s.eof())
             fatal("unexpected arguments");
 
+        ::eqbool::timer t(total_time);
+
         eqbool e;
         if(op == '.') {
             check_num_args(args, 0);
@@ -100,10 +104,10 @@ private:
             check_num_args(args, 2);
             if(r != 0 && r != 1)
                 fatal("constant result expected");
-            unsigned long count = eqbools.get_stats().sat_solution_count;
+            unsigned long count = eqbools.get_stats().num_sat_solutions;
             if(eqbools.is_equiv(args[0], args[1]) != static_cast<bool>(r))
                 fatal("equivalence check failed");
-            if(assert && eqbools.get_stats().sat_solution_count == count)
+            if(assert && eqbools.get_stats().num_sat_solutions == count)
                 fatal("equivlance check resolved without using SAT solver");
             return;
         } else {
@@ -128,14 +132,16 @@ private:
     }
 
     void print_stats() const {
-        long cpu_time = 1000 * std::clock() / CLOCKS_PER_SEC;
         const ::eqbool::eqbool_stats &stats = eqbools.get_stats();
+        double other_time = total_time - (stats.sat_time + stats.clauses_time);
         std::cout <<
-            "line " << line_no << ": " <<
-            cpu_time << " CPU ms, " <<
-            stats.sat_time << " SAT ms, " <<
-            stats.sat_solution_count << " solutions, " <<
-            stats.num_clauses << " clauses, " <<
+            line_no << ": " <<
+            static_cast<long>(total_time * 1000) << " ms, " <<
+            stats.num_sat_solutions << " solutions " <<
+            static_cast<long>(stats.sat_time * 1000) << " ms, " <<
+            stats.num_clauses << " clauses " <<
+            static_cast<long>(stats.clauses_time * 1000) << " ms, " <<
+            "other " << static_cast<long>(other_time * 1000) << " ms, " <<
             ::mallinfo2().uordblks / 1024 << "K allocated\n";
     }
 

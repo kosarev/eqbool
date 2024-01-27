@@ -141,6 +141,9 @@ bool eqbool_context::is_unsat(eqbool e) {
 
     auto *solver = new CaDiCaL::Solver;
 
+    {
+    timer t(stats.clauses_time);
+
     solver->add(skip_not(e));
     solver->add(0);
 
@@ -217,12 +220,15 @@ bool eqbool_context::is_unsat(eqbool e) {
         }
         unreachable("unknown node kind");
     }
+    }
 
-    std::clock_t start = std::clock();
-    bool unsat = solver->solve() == 20;
-    stats.sat_time += 1000 * (std::clock() - start) / CLOCKS_PER_SEC;
+    bool unsat;
+    {
+        timer t(stats.sat_time);
+        unsat = solver->solve() == 20;
+    }
 
-    ++stats.sat_solution_count;
+    ++stats.num_sat_solutions;
 
     delete solver;
 
