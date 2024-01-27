@@ -8,9 +8,11 @@
     Published under the MIT license.
 */
 
+#include <algorithm>
 #include <ctime>
 #include <fstream>
 #include <iostream>
+#include <map>
 #include <sstream>
 #include <vector>
 
@@ -131,10 +133,10 @@ private:
         nodes.push_back(e);
     }
 
-    void print_stats() const {
+    void print_stats(std::ostream &s) const {
         const ::eqbool::eqbool_stats &stats = eqbools.get_stats();
         double other_time = total_time - (stats.sat_time + stats.clauses_time);
-        std::cout <<
+        s <<
             line_no << ": " <<
             static_cast<long>(total_time * 1000) << " ms, " <<
             stats.num_sat_solutions << " solutions " <<
@@ -145,22 +147,41 @@ private:
             ::mallinfo2().uordblks / 1024 << "K allocated\n";
     }
 
+    void print_stats() {
+        print_stats(std::cout);
+
+        std::ostringstream s;
+        print_stats(s);
+        total_times[line_no].push_back({total_time, s.str()});
+    }
+
 public:
-    test_context(std::string filepath) : filepath(filepath) {
+    using time_and_stats_type = std::pair<double, std::string>;
+    using total_times_type = std::map<unsigned, std::vector<time_and_stats_type>>;
+    total_times_type &total_times;
+
+    test_context(std::string filepath, total_times_type &total_times)
+            : filepath(filepath), total_times(total_times) {
         nodes.push_back(eqbools.get_false());
         nodes.push_back(eqbools.get_true());
     }
 
     void process_test_lines(std::istream &f) {
         std::string line;
+        unsigned last_reported_line_no = 0;
         while(std::getline(f, line)) {
             ++line_no;
             // std::cout << std::to_string(line_no) << ": " << line << "\n";
             if(!line.empty() && line[0] != '#')
                 process_test_line(line);
-            if(line_no % 5000 == 0)
+            if(line_no % 1000 == 0) {
                 print_stats();
+                last_reported_line_no = line_no;
+            }
         }
+
+        if(line_no != last_reported_line_no)
+            print_stats();
 
         if(!f.eof())
             fatal("cannot read input");
@@ -170,12 +191,46 @@ public:
 }  // anonymous namespace
 
 int main(int argc, const char **argv) {
-    for(int i = 1; i != argc; ++i) {
+    (void) argc;  // Unused.
+
+    bool test_performance = false;
+    int i = 1;
+    for(; argv[i]; ++i) {
+        std::string arg = argv[i];
+        if(arg == "--test-performance") {
+            test_performance = true;
+            continue;
+        }
+        break;
+    }
+
+    int num_runs = test_performance ? 5 : 1;
+
+    test_context::total_times_type total_times;
+
+    for(; argv[i]; ++i) {
         std::string path = argv[i];
-        std::ifstream f(path);
-        if(!f)
-            fatal("cannot open " + path);
-        test_context c(path);
-        c.process_test_lines(f);
+        for(int n = 0; n != num_runs; ++n) {
+            if(test_performance) {
+                if(n != 0)
+                    std::cout << "\n";
+                std::cout << "run #" << n + 1 << "\n";
+            }
+
+            std::ifstream f(path);
+            if(!f)
+                fatal("cannot open " + path);
+            test_context c(path, total_times);
+            c.process_test_lines(f);
+        }
+    }
+
+    if(test_performance) {
+        std::cout << "\nmeadian times:\n";
+        for(auto &t : total_times) {
+            std::vector<test_context::time_and_stats_type> &v = t.second;
+            std::sort(v.begin(), v.end());
+            std::cout << v[v.size() / 2].second;
+        }
     }
 }
