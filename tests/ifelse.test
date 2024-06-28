@@ -13,6 +13,7 @@ assert_is (ifelse A B B) B
 assert_is (ifelse A ~A 1) ~A
 
 assert_is (ifelse A B 1) (or ~A B)
+assert_is (ifelse A 1 B) (or A B)
 
 assert_is (ifelse A B C) (ifelse ~A C B)
 
