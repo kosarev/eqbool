@@ -130,6 +130,9 @@ private:
 public:
     eqbool() = default;
 
+    bool is_void() const { return def_code == 0; }
+    operator bool() const { return !is_void(); }
+
     bool is_false() const;
     bool is_true() const;
     bool is_const() const { return is_false() || is_true(); }

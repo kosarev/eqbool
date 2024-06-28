@@ -1,8 +1,8 @@
 ! ? 1 1 1 0
 
-. A
-. B
-. C
+def A
+def B
+def C
 ? R A B C
 
 # IFELSE A 1 0 => A
@@ -23,7 +23,7 @@
 ! ? R2 B A ~A
 
 # IFELSE A B (IFELSE A C D) => IFELSE A B D.
-. D
+def D
 ? IF_ACD A C D
 ? IF_ABD A B D
 ! ? IF_ABD A B IF_ACD

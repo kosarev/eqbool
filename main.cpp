@@ -62,12 +62,25 @@ private:
 
     void process_test_line(const std::string &line) {
         std::istringstream s(line);
-        char op;
+        std::string op;
         if(!(s >> op))
             fatal("operator expected");
 
+        if(op == "def") {
+            std::string r;
+            if(!(s >> r))
+                fatal("result node expected");
+            if(!s.eof())
+                fatal("unexpected arguments");
+            eqbool &n = nodes[r];
+            if(n)
+                fatal("result is already defined");
+            n = eqbools.get(r.c_str());
+            return;
+        }
+
         bool assert = false;
-        if(op == '!') {
+        if(op == "!") {
             if(!(s >> op))
                 fatal("assertion operator expected");
             assert = true;
@@ -102,23 +115,23 @@ private:
         ::eqbool::timer t(total_time);
 
         eqbool e;
-        if(op == '.') {
+        if(assert && op == ".") {
             check_num_args(args, 0);
             e = eqbools.get(r.c_str());
-        } else if(op == '|') {
+        } else if(op == "|") {
             e = eqbools.get_or(args);
-        } else if(op == '&') {
+        } else if(op == "&") {
             e = eqbools.get_and(args);
-        } else if(op == '=') {
+        } else if(op == "=") {
             check_num_args(args, 2);
             e = eqbools.get_eq(args[0], args[1]);
-        } else if(op == '?') {
+        } else if(op == "?") {
             check_num_args(args, 3);
             e = eqbools.ifelse(args[0], args[1], args[2]);
-        } else if(op == '~') {
+        } else if(op == "~") {
             check_num_args(args, 1);
             e = ~args[0];
-        } else if(op == 'q') {
+        } else if(op == "q") {
             check_num_args(args, 2);
             if(r != "0" && r != "1")
                 fatal("constant result expected");
