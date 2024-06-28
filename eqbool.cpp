@@ -170,6 +170,8 @@ eqbool eqbool_context::ifelse(eqbool i, eqbool t, eqbool e) {
 
     if(e.is_false())
         return i & t;
+    if(e.is_true())
+        return ~i | t;
 
     if(t == ~e && t < i)
         std::tie(i, t, e) = std::make_tuple(t, i, ~i);
