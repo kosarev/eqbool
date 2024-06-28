@@ -1,12 +1,10 @@
-q 0 0 1
-q 1 0 0
 
 # Use SAT solver. This is supposed to fail if equivalence or
 # non-equivalence was established by means of simplification.
 def 2
 def 3
-! q 0 2 3
-! q 0 1 2
+assert_unequiv 2 3
+assert_unequiv 1 2
 
 def 4 (or 2 3)
-! q 0 2 4
+assert_unequiv 2 4

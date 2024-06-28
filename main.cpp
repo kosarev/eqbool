@@ -132,6 +132,8 @@ private:
     }
 
     void process_test_line(const std::string &line) {
+        ::eqbool::timer t(total_time);
+
         std::istringstream s(line);
         std::string op;
         if(!(s >> op))
@@ -153,69 +155,32 @@ private:
             return;
         }
 
-        if(op == "assert_is") {
+        if(op == "assert_is" || op == "assert_unequiv") {
             eqbool a = parse_expr(s);
             eqbool b = parse_expr(s);
             if(!a || !b)
                 fatal("arguments expected");
             if(s.peek() != std::istream::traits_type::eof())
                 fatal("unexpected arguments");
-            if(a != b) {
-                fatal(std::ostringstream() <<
-                          "nodes do not match\n"
-                          "a: " << a << "\n"
-                          "b: " << b);
+            if(op == "assert_is") {
+                if(a != b) {
+                    fatal(std::ostringstream() <<
+                              "nodes do not match\n"
+                              "a: " << a << "\n"
+                              "b: " << b);
+                }
+            } else {
+                assert(op == "assert_unequiv");
+                unsigned long count = eqbools.get_stats().num_sat_solutions;
+                if(eqbools.is_equiv(a, b) != false)
+                    fatal("equivalence check failed");
+                if(eqbools.get_stats().num_sat_solutions == count)
+                    fatal("equivlance check resolved without using SAT solver");
             }
             return;
         }
 
-        bool assert = false;
-        if(op == "!") {
-            if(!(s >> op))
-                fatal("assertion operator expected");
-            assert = true;
-        }
-
-        std::string r;
-        if(!(s >> r))
-            fatal("result node expected");
-
-        std::vector<eqbool> args;
-        for(;;) {
-            s >> std::ws;
-            if(s.peek() == '~') {
-                s.get();
-                std::string a;
-                if(!(s >> a))
-                    fatal("argument expected after '~'");
-                args.push_back(~get_node(a));
-                continue;
-            }
-
-            std::string a;
-            if(!(s >> a))
-                break;
-
-            args.push_back(get_node(a));
-        }
-
-        if(!s.eof())
-            fatal("unexpected arguments");
-
-        ::eqbool::timer t(total_time);
-
-        if(op == "q") {
-            check_num_args(args, 2);
-            if(r != "0" && r != "1")
-                fatal("constant result expected");
-            unsigned long count = eqbools.get_stats().num_sat_solutions;
-            if(eqbools.is_equiv(args[0], args[1]) != (r == "1"))
-                fatal("equivalence check failed");
-            if(assert && eqbools.get_stats().num_sat_solutions == count)
-                fatal("equivlance check resolved without using SAT solver");
-            return;
-        }
-        fatal("unknown operator");
+        fatal("unknown command");
     }
 
     template<typename T>
