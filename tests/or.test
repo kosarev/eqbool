@@ -6,12 +6,12 @@ assert_is (or 0 0 0) 0
 def 2
 assert_is (or 2 1) 1
 
-~ 3 2
+def 3 ~2
 assert_is (or 2 3) 1
 
 # Non-simplifiable OR.
 def 4
-| 5 2 4
+def 5 (or 2 4)
 
 # OR A A => A.
 assert_is (or 2 2) 2
@@ -22,9 +22,9 @@ assert_is (or 4 2) 5
 # OR A (AND A B) => A.
 def A
 def B
-& AB A B
+def AB (and A B)
 assert_is (or A AB) A
 
 # OR A (OR ~A B) => 1.
-| NA_B ~A B
+def NA_B (or ~A B)
 assert_is (or A NA_B) 1

@@ -3,7 +3,7 @@ assert_is (eq 1 0) 0
 
 # EQ A 0 => ~A
 def 2
-~ 3 2
+def 3 ~2
 assert_is (eq 2 0) 3
 
 # EQ 0 A => ~A

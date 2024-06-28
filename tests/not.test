@@ -3,7 +3,7 @@ assert_is ~1 0
 assert_is ~0 1
 
 def 2
-~ 3 2
+def 3 ~2
 assert_is ~2 3
 
 # Alternative syntax.

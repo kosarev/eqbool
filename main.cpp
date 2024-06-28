@@ -141,12 +141,15 @@ private:
             std::string r;
             if(!(s >> r))
                 fatal("result node expected");
-            if(!s.eof())
+            eqbool e = parse_expr(s);
+            if(!e)
+                e = eqbools.get(r.c_str());
+            if(s.peek() != std::istream::traits_type::eof())
                 fatal("unexpected arguments");
             eqbool &n = nodes[r];
             if(n)
                 fatal("result is already defined");
-            n = eqbools.get(r.c_str());
+            n = e;
             return;
         }
 
@@ -201,21 +204,7 @@ private:
 
         ::eqbool::timer t(total_time);
 
-        eqbool e;
-        if(op == "|") {
-            e = eqbools.get_or(args);
-        } else if(op == "&") {
-            e = eqbools.get_and(args);
-        } else if(op == "=") {
-            check_num_args(args, 2);
-            e = eqbools.get_eq(args[0], args[1]);
-        } else if(op == "?") {
-            check_num_args(args, 3);
-            e = eqbools.ifelse(args[0], args[1], args[2]);
-        } else if(op == "~") {
-            check_num_args(args, 1);
-            e = ~args[0];
-        } else if(op == "q") {
+        if(op == "q") {
             check_num_args(args, 2);
             if(r != "0" && r != "1")
                 fatal("constant result expected");
@@ -225,24 +214,8 @@ private:
             if(assert && eqbools.get_stats().num_sat_solutions == count)
                 fatal("equivlance check resolved without using SAT solver");
             return;
-        } else {
-            fatal("unknown operator");
         }
-
-        if(assert) {
-            eqbool expected = get_node(r);
-            if(e != expected) {
-                fatal(std::ostringstream() <<
-                          "nodes do not match\n"
-                          "actual: " << e << "\n"
-                          "expected: " << expected);
-            }
-            return;
-        }
-
-        if(nodes.find(r) != nodes.end())
-            fatal("result is already defined");
-        nodes[r] = e;
+        fatal("unknown operator");
     }
 
     template<typename T>
