@@ -52,7 +52,13 @@ private:
 
 public:
     timer(double &total) : total(total) {}
-    ~timer() { total += now() - start; }
+    ~timer() { update(); }
+
+    void update() {
+        double t = now();
+        total += t - start;
+        start = t;
+    }
 };
 
 namespace detail {

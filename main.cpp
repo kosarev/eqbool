@@ -132,8 +132,6 @@ private:
     }
 
     void process_test_line(const std::string &line) {
-        ::eqbool::timer t(total_time);
-
         std::istringstream s(line);
         std::string op;
         if(!(s >> op))
@@ -212,6 +210,7 @@ private:
 
     void print_stats() {
         print_stats(std::cout);
+        std::cout.flush();
 
         std::ostringstream s;
         print_stats(s);
@@ -230,6 +229,8 @@ public:
     }
 
     void process_test_lines(std::istream &f) {
+        ::eqbool::timer t(total_time);
+
         std::string line;
         unsigned last_reported_line_no = 0;
         while(std::getline(f, line)) {
@@ -238,13 +239,16 @@ public:
             if(!line.empty() && line[0] != '#')
                 process_test_line(line);
             if(line_no % 50000 == 0) {
+                t.update();
                 print_stats();
                 last_reported_line_no = line_no;
             }
         }
 
-        if(line_no != last_reported_line_no)
+        if(line_no != last_reported_line_no) {
+            t.update();
             print_stats();
+        }
 
         if(!f.eof())
             fatal("cannot read input");
@@ -273,6 +277,13 @@ int main(int argc, const char **argv) {
 
     for(; argv[i]; ++i) {
         std::string path = argv[i];
+        std::ifstream f(path);
+        if(!f)
+            fatal("cannot open " + path);
+        std::ostringstream input;
+        if(!(input << f.rdbuf()))
+            fatal("cannot read " + path);
+
         for(int n = 0; n != num_runs; ++n) {
             if(test_performance) {
                 if(n != 0)
@@ -280,20 +291,18 @@ int main(int argc, const char **argv) {
                 std::cout << "run #" << n + 1 << "\n";
             }
 
-            std::ifstream f(path);
-            if(!f)
-                fatal("cannot open " + path);
             test_context c(path, total_times);
-            c.process_test_lines(f);
+            std::istringstream is(input.str());
+            c.process_test_lines(is);
         }
     }
 
     if(test_performance) {
-        std::cout << "\nmeadian times:\n";
+        std::cout << "\nmedian times:\n";
         for(auto &t : total_times) {
             std::vector<test_context::time_and_stats_type> &v = t.second;
             std::sort(v.begin(), v.end());
-            std::cout << v[v.size() / 2].second;
+            std::cout << "median: " << v[v.size() / 2].second;
         }
     }
 }
