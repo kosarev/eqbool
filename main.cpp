@@ -155,7 +155,9 @@ private:
             return;
         }
 
-        if(op == "assert_is" || op == "assert_unequiv") {
+        if(op == "assert_is" ||
+               op == "assert_equiv" || op == "assert_unequiv" ||
+               op == "assert_sat_equiv" || op == "assert_sat_unequiv") {
             eqbool a = parse_expr(s);
             eqbool b = parse_expr(s);
             if(!a || !b)
@@ -170,11 +172,12 @@ private:
                               "b: " << b);
                 }
             } else {
-                assert(op == "assert_unequiv");
+                bool res = (op == "assert_equiv" || op == "assert_sat_equiv");
+                bool sat = (op == "assert_sat_equiv" || op == "assert_sat_unequiv");
                 unsigned long count = eqbools.get_stats().num_sat_solutions;
-                if(eqbools.is_equiv(a, b) != false)
+                if(eqbools.is_equiv(a, b) != res)
                     fatal("equivalence check failed");
-                if(eqbools.get_stats().num_sat_solutions == count)
+                if(sat && eqbools.get_stats().num_sat_solutions == count)
                     fatal("equivlance check resolved without using SAT solver");
             }
             return;

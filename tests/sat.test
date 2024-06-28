@@ -1,10 +1,13 @@
 
+assert_unequiv 0 1
+assert_equiv 0 0
+
 # Use SAT solver. This is supposed to fail if equivalence or
 # non-equivalence was established by means of simplification.
 def 2
 def 3
-assert_unequiv 2 3
-assert_unequiv 1 2
+assert_sat_unequiv 2 3
+assert_sat_unequiv 1 2
 
 def 4 (or 2 3)
-assert_unequiv 2 4
+assert_sat_unequiv 2 4
