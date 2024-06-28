@@ -1,3 +1,5 @@
-def 2
-def 3
-assert_is 2 2
+
+def A
+def B
+
+assert_is A A

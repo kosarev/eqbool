@@ -1,38 +1,27 @@
 
-assert_is (ifelse 1 1 0) 1
-
 def A
 def B
 def C
-def R (ifelse A B C)
+def D
+
+assert_is (ifelse 1 1 0) 1
 
 assert_is (ifelse A 1 0) A
 
 assert_is (ifelse A B B) B
 
-# IFELSE A ~A 1 => ~A
-def 6 ~B
-assert_is (ifelse B ~B 1) 6
+assert_is (ifelse A ~A 1) ~A
 
-# IFELSE A B C is IFELSE ~A C B.
-assert_is (ifelse ~A C B) R
+assert_is (ifelse A B C) (ifelse ~A C B)
 
-# IFELSE A B ~B is IFELSE B A ~A (because both are EQ A B).
-def R2 (ifelse A B ~B)
-assert_is (ifelse B A ~A) R2
+assert_is (ifelse B A ~A) (eq A B)
+assert_is (ifelse A B ~B) (eq A B)
+assert_is (ifelse B A ~A) (ifelse A B ~B)
 
-# IFELSE A B (IFELSE A C D) => IFELSE A B D.
-def D
-def IF_ACD (ifelse A C D)
-def IF_ABD (ifelse A B D)
-assert_is (ifelse A B IF_ACD) IF_ABD
+assert_is (ifelse A B (ifelse A C D)) (ifelse A B D)
 
 assert_is (ifelse (or A B) C B) (ifelse (or A B) C 0)
 
-# IFELSE A B 0 => AND A B.
-def AB (and A B)
-assert_is (ifelse A B 0) AB
+assert_is (ifelse A B 0) (and A B)
 
-# IFELSE A B (AND A B) => IFELSE A B 0 => AND A B.
-def IF_A_B_AB (ifelse A B AB)
-assert_is (ifelse A B AB) AB
+assert_is (ifelse A B (and A B)) (and A B)
