@@ -1,1 +1,2 @@
-! & 1
+
+assert_is (and) 1

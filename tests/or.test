@@ -1,29 +1,30 @@
-! | 0
-! | 0 0
-! | 0 0 0 0
+
+assert_is (or) 0
+assert_is (or 0) 0
+assert_is (or 0 0 0) 0
 
 def 2
-! | 1 2 1
+assert_is (or 2 1) 1
 
 ~ 3 2
-! | 1 2 3
+assert_is (or 2 3) 1
 
 # Non-simplifiable OR.
 def 4
 | 5 2 4
 
 # OR A A => A.
-! | 2 2 2
+assert_is (or 2 2) 2
 
 # The order of arguments should not matter.
-! | 5 4 2
+assert_is (or 4 2) 5
 
 # OR A (AND A B) => A.
 def A
 def B
 & AB A B
-! | A A AB
+assert_is (or A AB) A
 
 # OR A (OR ~A B) => 1.
 | NA_B ~A B
-! | 1 A NA_B
+assert_is (or A NA_B) 1

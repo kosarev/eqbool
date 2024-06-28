@@ -1,42 +1,38 @@
-! ? 1 1 1 0
+
+assert_is (ifelse 1 1 0) 1
 
 def A
 def B
 def C
 ? R A B C
 
-# IFELSE A 1 0 => A
-! ? A A 1 0
+assert_is (ifelse A 1 0) A
 
-# IFELSE A B B => B
-! ? B A B B
+assert_is (ifelse A B B) B
 
 # IFELSE A ~A 1 => ~A
 ~ 6 B
-! ? 6 B ~B 1
+assert_is (ifelse B ~B 1) 6
 
 # IFELSE A B C is IFELSE ~A C B.
-! ? R ~A C B
+assert_is (ifelse ~A C B) R
 
 # IFELSE A B ~B is IFELSE B A ~A (because both are EQ A B).
 ? R2 A B ~B
-! ? R2 B A ~A
+assert_is (ifelse B A ~A) R2
 
 # IFELSE A B (IFELSE A C D) => IFELSE A B D.
 def D
 ? IF_ACD A C D
 ? IF_ABD A B D
-! ? IF_ABD A B IF_ACD
+assert_is (ifelse A B IF_ACD) IF_ABD
 
-# IFELSE (OR A B) C B => IFELSE (OR A B) C 0.
-| (A|B) A B
-? IF_(A|B)_C_0 (A|B) C 0
-! ? IF_(A|B)_C_0 (A|B) C B
+assert_is (ifelse (or A B) C B) (ifelse (or A B) C 0)
 
 # IFELSE A B 0 => AND A B.
 & AB A B
-! ? AB A B 0
+assert_is (ifelse A B 0) AB
 
 # IFELSE A B (AND A B) => IFELSE A B 0 => AND A B.
 ? IF_A_B_AB A B AB
-! ? AB A B AB
+assert_is (ifelse A B AB) AB

@@ -1,6 +1,13 @@
-! ~ 1 0
-! ~ 0 1
+
+assert_is ~1 0
+assert_is ~0 1
 
 def 2
 ~ 3 2
-! ~ 2 3
+assert_is ~2 3
+
+# Alternative syntax.
+def A
+assert_is (not 0) 1
+assert_is (not 1) 0
+assert_is (not A) ~A

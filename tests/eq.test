@@ -1,18 +1,19 @@
-! = 0 1 0
+
+assert_is (eq 1 0) 0
 
 # EQ A 0 => ~A
 def 2
 ~ 3 2
-! = 3 2 0
+assert_is (eq 2 0) 3
 
 # EQ 0 A => ~A
-! = 3 0 2
+assert_is (eq 0 2) 3
 
 # EQ A 1 => A
-! = 2 2 1
+assert_is (eq 2 1) 2
 
 # EQ 1 A => A
-! = 2 1 2
+assert_is (eq 1 2) 2
 
 # EQ A A => 1
-! = 1 2 2
+assert_is (eq 2 2) 1

@@ -60,6 +60,77 @@ private:
             fatal(std::to_string(n) + " arguments expected");
     }
 
+    static bool is_id_char(int c) {
+        return ('0' <= c && c <= '9') ||
+               ('a' <= c && c <= 'z') ||
+               ('A' <= c && c <= 'Z') ||
+               c == '_';
+    }
+
+    eqbool parse_expr(std::istream &s) {
+        s >> std::ws;
+        int c = s.peek();
+        if(c == '(') {
+            s.get();
+            std::string op;
+            if(!(s >> op))
+                fatal("operator expected");
+
+            std::vector<eqbool> args;
+            if(op.back() == ')') {
+                op.resize(op.size() - 1);
+            } else {
+                for(;;) {
+                    eqbool a = parse_expr(s);
+                    if(!a)
+                        break;
+                    args.push_back(a);
+                }
+                if(s.get() != ')')
+                    fatal("no matching closing parenthesis");
+            }
+
+            if(op == "not") {
+                check_num_args(args, 1);
+                return ~args[0];
+            }
+            if(op == "and")
+                return eqbools.get_and(args);
+            if(op == "or")
+                return eqbools.get_or(args);
+            if(op == "ifelse") {
+                check_num_args(args, 3);
+                return eqbools.ifelse(args[0], args[1], args[2]);
+            }
+            if(op == "eq") {
+                check_num_args(args, 2);
+                return eqbools.get_eq(args[0], args[1]);
+            }
+
+            fatal("unknown operator");
+        }
+
+        if(is_id_char(c)) {
+            std::string id;
+            while(is_id_char(c)) {
+                id.push_back(static_cast<char>(c));
+                s.get();
+                c = s.peek();
+            }
+            return get_node(id);
+        }
+
+        if(c == '~') {
+            s.get();
+            eqbool a = parse_expr(s);
+            if(!a)
+                fatal("argument expected");
+            return ~a;
+        }
+
+        return {};
+    }
+
     void process_test_line(const std::string &line) {
         std::istringstream s(line);
         std::string op;
@@ -76,6 +147,22 @@ private:
             if(n)
                 fatal("result is already defined");
             n = eqbools.get(r.c_str());
+            return;
+        }
+
+        if(op == "assert_is") {
+            eqbool a = parse_expr(s);
+            eqbool b = parse_expr(s);
+            if(!a || !b)
+                fatal("arguments expected");
+            if(s.peek() != std::istream::traits_type::eof())
+                fatal("unexpected arguments");
+            if(a != b) {
+                fatal(std::ostringstream() <<
+                          "nodes do not match\n"
+                          "a: " << a << "\n"
+                          "b: " << b);
+            }
             return;
         }
 
@@ -115,10 +202,7 @@ private:
         ::eqbool::timer t(total_time);
 
         eqbool e;
-        if(assert && op == ".") {
-            check_num_args(args, 0);
-            e = eqbools.get(r.c_str());
-        } else if(op == "|") {
+        if(op == "|") {
             e = eqbools.get_or(args);
         } else if(op == "&") {
             e = eqbools.get_and(args);
