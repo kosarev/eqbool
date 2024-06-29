@@ -59,8 +59,13 @@ eqbool eqbool_context::get(const char *term) {
 }
 
 eqbool eqbool_context::get_or(args_ref args) {
+    // Order the arguments before simplifications so we never
+    // depend on the order they are specified in.
+    std::vector<eqbool> sorted_args(args.begin(), args.end());
+    std::sort(sorted_args.begin(), sorted_args.end());
+
     std::vector<eqbool> selected_args;
-    for(eqbool a : args) {
+    for(eqbool a : sorted_args) {
         check(a);
         if(a.is_false() || contains(selected_args, a))
             continue;
@@ -97,8 +102,6 @@ eqbool eqbool_context::get_or(args_ref args) {
         return eqfalse;
     if(selected_args.size() == 1)
         return selected_args[0];
-
-    std::sort(selected_args.begin(), selected_args.end());
 
     node_def def(node_kind::or_node, selected_args, *this);
     return eqbool(add_def(def));
