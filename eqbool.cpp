@@ -117,12 +117,16 @@ eqbool eqbool_context::get_and(args_ref args) {
 }
 
 eqbool eqbool_context::simplify(eqbool p, eqbool e) {
+    // p = (and A...), ~e in A...  =>  e = 0
+    // p = (and A...),  e in A...  =>  e = 1
     if(p.is_inversion()) {
         const node_def &def = (~p).get_def();
         if(def.kind == node_kind::or_node) {
             for(const eqbool &a : def.args) {
                 if(a == e)
                     return eqfalse;
+                if(~a == e)
+                    return eqtrue;
             }
         }
     }
