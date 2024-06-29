@@ -174,8 +174,8 @@ eqbool eqbool_context::ifelse(eqbool i, eqbool t, eqbool e) {
         return t.is_true() ? i : ~i;
     }
 
-    if(t.is_true())
-        return i | e;
+    if(t.is_const())
+        return t.is_false() ? (~i & e) : (i | e);
 
     if(e.is_const())
         return e.is_false() ? (i & t) : (~i | t);
