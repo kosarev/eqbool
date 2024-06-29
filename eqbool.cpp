@@ -41,13 +41,16 @@ bool contains(const C &c, const E &e) {
 node_def &eqbool_context::add_def(const node_def &def) {
     // Store node definitions as keys in a hash table and map
     // them to pointers to themselves.
+    std::size_t id = defs.size();
     auto r = defs.insert({def, nullptr});
     auto &i = r.first;
     node_def &key = const_cast<node_def&>(i->first);
     node_def *&value = i->second;
     bool inserted = r.second;
-    if(inserted)
+    if(inserted) {
+        key.id = id;
         value = &key;
+    }
     return *value;
 }
 

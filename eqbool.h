@@ -69,6 +69,7 @@ constexpr uintptr_t inversion_flag = 1;
 
 struct node_def {
     eqbool_context *context = nullptr;
+    std::size_t id = 0;
     node_kind kind = node_kind::none;
     std::string term;
     std::vector<eqbool> args;
@@ -104,6 +105,7 @@ class eqbool {
 private:
     using node_def = detail::node_def;
 
+    // TODO: Should default to reinterpret_cast<uintptr_t>(nullptr)?
     uintptr_t def_code = 0;
 
     eqbool(uintptr_t def_code)
@@ -130,6 +132,16 @@ private:
         return reinterpret_cast<node_def*>(def)->get_context();
     }
 
+    // Defines the canonical order. Nodes created earlier are
+    // guaranteed to come before nodes created later. Also,
+    // inversions always come immediately after their
+    // non-inverted versions.
+    std::size_t get_id() const {
+        uintptr_t def = def_code & ~detail::inversion_flag;
+        assert(def);
+        return reinterpret_cast<node_def*>(def)->id * 2 + is_inversion();
+    }
+
     friend class eqbool_context;
     friend struct node_def::hasher;
 
@@ -152,10 +164,9 @@ public:
         return !(*this == other);
     }
 
-    // Defines an (implementation-defined) canonical order.
     bool operator < (const eqbool &other) const {
         assert(&get_context() == &other.get_context());
-        return def_code < other.def_code;
+        return get_id() < other.get_id();
     }
 
     eqbool operator ~ () const;
