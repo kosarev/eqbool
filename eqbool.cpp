@@ -131,6 +131,7 @@ eqbool eqbool_context::simplify(eqbool p, eqbool e) {
         }
     }
 
+    // e = (and A...), ~p in A...  =>  e = 0
     if(e.is_inversion()) {
         const node_def &def = (~e).get_def();
         if(def.kind == node_kind::or_node) {
