@@ -121,18 +121,13 @@ eqbool eqbool_context::simplify(args_ref falses, eqbool e) {
         if(p == e)
             return eqtrue;
 
-        // p = (and A...), ~e in A...  =>  e = 0
-        // p = (and A...),  e in A...  =>  e = 1
+        // Dive into nested OR nodes.
         if(p.is_inversion()) {
             const node_def &def = (~p).get_def();
             if(def.kind == node_kind::or_node) {
-                for(eqbool or_a : def.args) {
-                    eqbool a = ~or_a;
-                    if(a == ~e)
-                        return eqfalse;
-                    if(a == e)
-                        return eqtrue;
-                }
+                eqbool s = simplify(def.args, e);
+                if(s != e)
+                    return simplify(falses, s);
             }
         }
 
