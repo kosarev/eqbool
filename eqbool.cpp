@@ -142,6 +142,7 @@ eqbool eqbool_context::ifelse(eqbool i, eqbool t, eqbool e) {
     check(t);
     check(e);
 
+    t = simplify({~i}, t);
     e = simplify({i}, e);
 
     if(!e.is_inversion()) {
