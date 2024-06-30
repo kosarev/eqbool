@@ -110,28 +110,23 @@ eqbool eqbool_context::simplify(args_ref falses, eqbool e) {
                 }
             }
         }
-    }
 
-    if(!e.is_inversion()) {
-        // e = (or A...), p in A...  =>  e = 1
-        const node_def &def = e.get_def();
-        if(def.kind == node_kind::or_node) {
-            // TODO: Can we use ordering to find matches quicker?
-            for(eqbool a : def.args) {
-                for(eqbool f : falses) {
-                    eqbool p = ~f;
+        if(!e.is_inversion()) {
+            // e = (or A...), p in A...  =>  e = 1
+            const node_def &def = e.get_def();
+            if(def.kind == node_kind::or_node) {
+                // TODO: Can we use ordering to find matches quicker?
+                for(eqbool a : def.args) {
                     if(a == p)
                         return eqtrue;
                 }
             }
-        }
-    } else {
-        // e = (and A...), ~p in A...  =>  e = 0
-        const node_def &def = (~e).get_def();
-        if(def.kind == node_kind::or_node) {
-            for(eqbool or_a : def.args) {
-                eqbool a = ~or_a;
-                for(eqbool f : falses) {
+        } else {
+            // e = (and A...), ~p in A...  =>  e = 0
+            const node_def &def = (~e).get_def();
+            if(def.kind == node_kind::or_node) {
+                for(eqbool or_a : def.args) {
+                    eqbool a = ~or_a;
                     if(a == f)
                         return eqfalse;
                 }
