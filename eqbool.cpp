@@ -181,6 +181,14 @@ eqbool eqbool_context::ifelse(eqbool i, eqbool t, eqbool e) {
     t = simplify({~i}, t);
     e = simplify({i}, e);
 
+    // (ifelse A (ifelse A B C) D) => (ifelse A B D)
+    if(!t.is_inversion()) {
+        const node_def &def = t.get_def();
+        if(def.kind == node_kind::ifelse && def.args[0] == i)
+            t = def.args[1];
+    }
+
+    // (ifelse A B (ifelse A C D)) => (ifelse A B D)
     if(!e.is_inversion()) {
         const node_def &def = e.get_def();
         if(def.kind == node_kind::ifelse && def.args[0] == i)
