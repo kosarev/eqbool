@@ -1,2 +1,8 @@
 
+def A
+def B
+def C
+
 assert_is (and) 1
+
+assert_is (and A B C) ~(or ~A ~B ~C)
