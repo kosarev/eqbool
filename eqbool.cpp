@@ -29,15 +29,6 @@ namespace eqbool {
 using detail::node_def;
 using detail::node_kind;
 
-namespace {
-
-template<typename C, typename E>
-bool contains(const C &c, const E &e) {
-    return std::find(c.begin(), c.end(), e) != c.end();
-}
-
-}  // anonymous namespace
-
 node_def &eqbool_context::add_def(const node_def &def) {
     // Store node definitions as keys in a hash table and map
     // them to pointers to themselves.
@@ -64,28 +55,15 @@ eqbool eqbool_context::get_or(args_ref args) {
     std::vector<eqbool> sorted_args(args.begin(), args.end());
     std::sort(sorted_args.begin(), sorted_args.end());
 
+    // TODO: We can reuse 'sorted_args'.
     std::vector<eqbool> selected_args;
     for(eqbool a : sorted_args) {
         check(a);
-
         a = simplify(selected_args, a);
-
-        if(a.is_false())
-            continue;
         if(a.is_true())
             return eqtrue;
-
-        if(!a.is_inversion()) {
-            const node_def &def = a.get_def();
-            if(def.kind == node_kind::or_node) {
-                for(eqbool b : def.args) {
-                    if(contains(selected_args, ~b))
-                        return eqtrue;
-                }
-            }
-        }
-
-        selected_args.push_back(a);
+        if(!a.is_false())
+            selected_args.push_back(a);
     }
 
     if(selected_args.empty())
@@ -134,8 +112,21 @@ eqbool eqbool_context::simplify(args_ref falses, eqbool e) {
         }
     }
 
-    // e = (and A...), ~p in A...  =>  e = 0
-    if(e.is_inversion()) {
+    if(!e.is_inversion()) {
+        // e = (or A...), p in A...  =>  e = 1
+        const node_def &def = e.get_def();
+        if(def.kind == node_kind::or_node) {
+            // TODO: Can we use ordering to find matches quicker?
+            for(eqbool a : def.args) {
+                for(eqbool f : falses) {
+                    eqbool p = ~f;
+                    if(a == p)
+                        return eqtrue;
+                }
+            }
+        }
+    } else {
+        // e = (and A...), ~p in A...  =>  e = 0
         const node_def &def = (~e).get_def();
         if(def.kind == node_kind::or_node) {
             for(eqbool or_a : def.args) {
