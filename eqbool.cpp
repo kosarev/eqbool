@@ -71,6 +71,9 @@ eqbool eqbool_context::get_or(args_ref args) {
     if(selected_args.size() == 1)
         return selected_args[0];
 
+    // Order the arguments again to guarantee uniqueness.
+    std::sort(selected_args.begin(), selected_args.end());
+
     node_def def(node_kind::or_node, selected_args, *this);
     return eqbool(add_def(def));
 }
@@ -112,9 +115,17 @@ eqbool eqbool_context::simplify(args_ref falses, eqbool e) {
         }
 
         if(!e.is_inversion()) {
-            // e = (or A...), p in A...  =>  e = 1
             const node_def &def = e.get_def();
             if(def.kind == node_kind::or_node) {
+                // e = (or A B), p = ~A/~B  =>  e = B/A
+                if(def.args.size() == 2) {
+                    if(def.args[0] == ~p)
+                        return def.args[1];
+                    if(def.args[1] == ~p)
+                        return def.args[0];
+                }
+
+                // e = (or A...), p in A...  =>  e = 1
                 // TODO: Can we use ordering to find matches quicker?
                 for(eqbool a : def.args) {
                     if(a == p)

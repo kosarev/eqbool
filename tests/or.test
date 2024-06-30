@@ -13,6 +13,7 @@ assert_is (or A ~A) 1
 assert_is (or A A) A
 
 assert_is (or A B) (or B A)
+assert_is (or (or A B) B) (or A B)
 
 assert_is (or A (and A B)) A
 assert_is (or (and A B) A) A
