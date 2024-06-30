@@ -40,6 +40,8 @@ private:
 
     double total_time = 0;
 
+    bool find_mismatches = false;
+
     [[noreturn]] void fatal(std::string msg) const {
         ::fatal(filepath + ": " + std::to_string(line_no) + ": " + msg);
     }
@@ -164,10 +166,17 @@ private:
                 fatal("unexpected arguments");
             if(op == "assert_is") {
                 if(a != b) {
-                    fatal(std::ostringstream() <<
-                              "nodes do not match\n"
-                              "a: " << a << "\n"
-                              "b: " << b);
+                    if(find_mismatches) {
+                        std::ostringstream ss;
+                        ss << "(" << a << ") vs (" << b << ")";
+                        std::cout << line_no << ": " << ss.str().size() <<
+                                     " " << ss.str() << "\n";
+                    } else {
+                        fatal(std::ostringstream() <<
+                                  "nodes do not match\n"
+                                  "a: " << a << "\n"
+                                  "b: " << b);
+                    }
                 }
             } else {
                 bool res = (op == "assert_equiv" || op == "assert_sat_equiv");
@@ -222,8 +231,10 @@ public:
     using total_times_type = std::map<unsigned, std::vector<time_and_stats_type>>;
     total_times_type &total_times;
 
-    test_context(std::string filepath, total_times_type &total_times)
-            : filepath(filepath), total_times(total_times) {
+    test_context(std::string filepath, total_times_type &total_times,
+                 bool find_mismatches)
+            : filepath(filepath), find_mismatches(find_mismatches),
+              total_times(total_times) {
         nodes["0"] = eqbools.get_false();
         nodes["1"] = eqbools.get_true();
     }
@@ -238,14 +249,14 @@ public:
             // std::cout << std::to_string(line_no) << ": " << line << "\n";
             if(!line.empty() && line[0] != '#')
                 process_test_line(line);
-            if(line_no % 50000 == 0) {
+            if(!find_mismatches && line_no % 50000 == 0) {
                 t.update();
                 print_stats();
                 last_reported_line_no = line_no;
             }
         }
 
-        if(line_no != last_reported_line_no) {
+        if(!find_mismatches && line_no != last_reported_line_no) {
             t.update();
             print_stats();
         }
@@ -260,10 +271,15 @@ public:
 int main(int argc, const char **argv) {
     (void) argc;  // Unused.
 
+    bool find_mismatches = false;
     bool test_performance = false;
     int i = 1;
     for(; argv[i]; ++i) {
         std::string arg = argv[i];
+        if(arg == "--find-mismatches") {
+            find_mismatches = true;
+            continue;
+        }
         if(arg == "--test-performance") {
             test_performance = true;
             continue;
@@ -291,7 +307,7 @@ int main(int argc, const char **argv) {
                 std::cout << "run #" << n + 1 << "\n";
             }
 
-            test_context c(path, total_times);
+            test_context c(path, total_times, find_mismatches);
             std::istringstream is(input.str());
             c.process_test_lines(is);
         }
