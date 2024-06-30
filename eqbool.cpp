@@ -120,9 +120,9 @@ eqbool eqbool_context::simplify(args_ref falses, eqbool e) {
                 // e = (or A B), p = ~A/~B  =>  e = B/A
                 if(def.args.size() == 2) {
                     if(def.args[0] == ~p)
-                        return def.args[1];
+                        return simplify(falses, def.args[1]);
                     if(def.args[1] == ~p)
-                        return def.args[0];
+                        return simplify(falses, def.args[0]);
                 }
 
                 // e = (or A...), p in A...  =>  e = 1

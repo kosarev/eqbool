@@ -1,6 +1,7 @@
 
 def A
 def B
+def C
 
 assert_is (or) 0
 assert_is (or 0) 0
@@ -19,3 +20,5 @@ assert_is (or A (and A B)) A
 assert_is (or (and A B) A) A
 
 assert_is (or A (or ~A B)) 1
+
+assert_is (or A (or B C) (or B C) C) (or A B C)
