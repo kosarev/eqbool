@@ -158,6 +158,14 @@ eqbool eqbool_context::simplify(args_ref falses, eqbool e) {
             // e = (and A...), ~p in A...  =>  e = 0
             const node_def &def = (~e).get_def();
             if(def.kind == node_kind::or_node) {
+                // e = (and A B), p = A/B  =>  e = B/A
+                if(def.args.size() == 2) {
+                    if(def.args[0] == ~p)
+                        return simplify(falses, ~def.args[1]);
+                    if(def.args[1] == ~p)
+                        return simplify(falses, ~def.args[0]);
+                }
+
                 for(eqbool or_a : def.args) {
                     eqbool a = ~or_a;
                     if(a == f)
