@@ -182,8 +182,12 @@ private:
                 bool res = (op == "assert_equiv" || op == "assert_sat_equiv");
                 bool sat = (op == "assert_sat_equiv" || op == "assert_sat_unequiv");
                 unsigned long count = eqbools.get_stats().num_sat_solutions;
-                if(eqbools.is_equiv(a, b) != res)
-                    fatal("equivalence check failed");
+                if(eqbools.is_equiv(a, b) != res) {
+                    fatal(std::ostringstream() <<
+                        "equivalence check failed\n" <<
+                        "a: " << a << "\n"
+                        "b: " << b);
+                }
                 if(sat && eqbools.get_stats().num_sat_solutions == count)
                     fatal("equivlance check resolved without using SAT solver");
             }

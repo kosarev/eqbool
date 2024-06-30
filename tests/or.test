@@ -22,3 +22,5 @@ assert_is (or (and A B) A) A
 assert_is (or A (or ~A B)) 1
 
 assert_is (or A (or B C) (or B C) C) (or A B C)
+
+assert_is (or (and A B) (and ~A C)) (ifelse A B C)
