@@ -218,7 +218,7 @@ private:
     }
 
     void print_stats() {
-        print_stats(std::cout);
+        print_stats(find_mismatches ? std::cerr : std::cout);
         std::cout.flush();
 
         std::ostringstream s;
@@ -249,14 +249,14 @@ public:
             // std::cout << std::to_string(line_no) << ": " << line << "\n";
             if(!line.empty() && line[0] != '#')
                 process_test_line(line);
-            if(!find_mismatches && line_no % 50000 == 0) {
+            if(line_no % 50000 == 0) {
                 t.update();
                 print_stats();
                 last_reported_line_no = line_no;
             }
         }
 
-        if(!find_mismatches && line_no != last_reported_line_no) {
+        if(line_no != last_reported_line_no) {
             t.update();
             print_stats();
         }

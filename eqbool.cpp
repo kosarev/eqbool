@@ -67,9 +67,12 @@ eqbool eqbool_context::get_or(args_ref args) {
     std::vector<eqbool> selected_args;
     for(eqbool a : sorted_args) {
         check(a);
-        if(a.is_false() || contains(selected_args, a))
+
+        a = simplify(selected_args, a);
+
+        if(a.is_false())
             continue;
-        if(a.is_true() || contains(selected_args, ~a))
+        if(a.is_true())
             return eqtrue;
 
         if(!a.is_inversion()) {
@@ -79,19 +82,6 @@ eqbool eqbool_context::get_or(args_ref args) {
                     if(contains(selected_args, ~b))
                         return eqtrue;
                 }
-            }
-        } else {
-            const node_def &def = (~a).get_def();
-            if(def.kind == node_kind::or_node) {
-                bool skip = false;
-                for(eqbool b : def.args) {
-                    if(contains(selected_args, ~b)) {
-                        skip = true;
-                        break;
-                    }
-                }
-                if(skip)
-                    continue;
             }
         }
 
@@ -116,17 +106,30 @@ eqbool eqbool_context::get_and(args_ref args) {
     return ~get_or(or_args);
 }
 
-eqbool eqbool_context::simplify(eqbool p, eqbool e) {
-    // p = (and A...), ~e in A...  =>  e = 0
-    // p = (and A...),  e in A...  =>  e = 1
-    if(p.is_inversion()) {
-        const node_def &def = (~p).get_def();
-        if(def.kind == node_kind::or_node) {
-            for(const eqbool &a : def.args) {
-                if(a == e)
-                    return eqfalse;
-                if(~a == e)
-                    return eqtrue;
+eqbool eqbool_context::simplify(args_ref falses, eqbool e) {
+    if(e.is_const())
+        return e;
+
+    for(eqbool f : falses) {
+        if(f == e)
+            return eqfalse;
+
+        eqbool p = ~f;
+        if(p == e)
+            return eqtrue;
+
+        // p = (and A...), ~e in A...  =>  e = 0
+        // p = (and A...),  e in A...  =>  e = 1
+        if(p.is_inversion()) {
+            const node_def &def = (~p).get_def();
+            if(def.kind == node_kind::or_node) {
+                for(eqbool or_a : def.args) {
+                    eqbool a = ~or_a;
+                    if(a == ~e)
+                        return eqfalse;
+                    if(a == e)
+                        return eqtrue;
+                }
             }
         }
     }
@@ -135,9 +138,12 @@ eqbool eqbool_context::simplify(eqbool p, eqbool e) {
     if(e.is_inversion()) {
         const node_def &def = (~e).get_def();
         if(def.kind == node_kind::or_node) {
-            for(const eqbool &a : def.args) {
-                if(a == p)
-                    return eqfalse;
+            for(eqbool or_a : def.args) {
+                eqbool a = ~or_a;
+                for(eqbool f : falses) {
+                    if(a == f)
+                        return eqfalse;
+                }
             }
         }
     }
@@ -150,7 +156,7 @@ eqbool eqbool_context::ifelse(eqbool i, eqbool t, eqbool e) {
     check(t);
     check(e);
 
-    e = simplify(~i, e);
+    e = simplify({i}, e);
 
     if(!e.is_inversion()) {
         const node_def &def = e.get_def();
