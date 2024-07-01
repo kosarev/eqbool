@@ -29,20 +29,11 @@ namespace eqbool {
 using detail::node_def;
 using detail::node_kind;
 
-node_def &eqbool_context::add_def(const node_def &def) {
+const node_def &eqbool_context::add_def(node_def def) {
     // Store node definitions as keys in a hash table and map
     // them to pointers to themselves.
-    std::size_t id = defs.size();
-    auto r = defs.insert({def, nullptr});
-    auto &i = r.first;
-    node_def &key = const_cast<node_def&>(i->first);
-    node_def *&value = i->second;
-    bool inserted = r.second;
-    if(inserted) {
-        key.id = id;
-        value = &key;
-    }
-    return *value;
+    def.id = defs.size();
+    return *defs.insert(def).first;
 }
 
 eqbool eqbool_context::get(const char *term) {

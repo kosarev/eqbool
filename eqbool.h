@@ -15,6 +15,7 @@
 #include <initializer_list>
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 namespace eqbool {
@@ -210,15 +211,14 @@ class eqbool_context {
 private:
     using node_def = detail::node_def;
 
-    std::unordered_map<node_def, node_def*,
-                       node_def::hasher, node_def::matcher> defs;
+    std::unordered_set<node_def, node_def::hasher, node_def::matcher> defs;
 
     eqbool_stats stats;
 
     eqbool eqfalse{add_def(node_def("0", *this))};
     eqbool eqtrue = ~eqfalse;
 
-    node_def &add_def(const node_def &def);
+    const node_def &add_def(node_def def);
 
     void check(eqbool e) const {
         unused(&e);
