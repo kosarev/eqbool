@@ -28,3 +28,16 @@ assert_is (or A (or B C) (or B C) C) (or A B C)
 assert_is (or A (and ~A B)) (or A B)
 
 assert_is (or (and A B) (and ~A C)) (ifelse A B C)
+
+# Use a new node to ensure the arguments come in the specified
+# order before simplification, which is critical for this test.
+def X
+assert_is (or (and ~X B) (or X B)) (or X B)
+
+# All equivalent OR trees must result into the same node.
+def XA
+def XB
+def XC
+def XD
+assert_is (or (or XA XB) (or XC XD)) (or XA XB XC XD)
+assert_is (or (or XA XC) (or XB XD)) (or XA XB XC XD)

@@ -29,6 +29,63 @@ namespace eqbool {
 using detail::node_def;
 using detail::node_kind;
 
+void detail::hasher::flatten_args(std::vector<eqbool> &flattened, args_ref args) {
+    for(eqbool a : args) {
+        if(!a.is_inversion()) {
+            const node_def &def = a.get_def();
+            if(def.kind == node_kind::or_node) {
+                flatten_args(flattened, def.args);
+                continue;
+            }
+        }
+
+        flattened.push_back(a);
+    }
+}
+
+std::size_t detail::hasher::operator () (const node_def &def) const {
+    std::size_t h = 0;
+    hash(h, def.kind);
+    hash(h, def.term);
+
+    if(def.kind == node_kind::ifelse) {
+        hash(h, def.args[0].def_code);
+        hash(h, def.args[1].def_code);
+        hash(h, def.args[2].def_code);
+    } else if(def.kind == node_kind::or_node) {
+        std::vector<eqbool> args;
+        flatten_args(args, def.args);
+        std::sort(args.begin(), args.end());
+        for(eqbool a : args)
+            hash(h, a.def_code);
+    } else {
+        assert(def.args.size() == 0);
+    }
+
+    return h;
+}
+
+inline bool detail::matcher::operator () (const node_def &a,
+                                          const node_def &b) const {
+    assert(&a.get_context() == &b.get_context());
+    if(a.kind != b.kind || a.term != b.term)
+        return false;
+
+    if(a.kind == node_kind::none)
+        return true;
+
+    if(a.kind == node_kind::ifelse)
+        return a.args == b.args;
+
+    assert(a.kind == node_kind::or_node);
+    std::vector<eqbool> a_args, b_args;
+    hasher::flatten_args(a_args, a.args);
+    hasher::flatten_args(b_args, b.args);
+    std::sort(a_args.begin(), a_args.end());
+    std::sort(b_args.begin(), b_args.end());
+    return a_args == b_args;
+}
+
 const node_def &eqbool_context::add_def(node_def def) {
     // Store node definitions as keys in a hash table and map
     // them to pointers to themselves.
@@ -41,16 +98,32 @@ eqbool eqbool_context::get(const char *term) {
 }
 
 eqbool eqbool_context::get_or(args_ref args) {
+    for(eqbool a : args)
+        check(a);
+
     // Order the arguments before simplifications so we never
     // depend on the order they are specified in.
     std::vector<eqbool> sorted_args(args.begin(), args.end());
     std::sort(sorted_args.begin(), sorted_args.end());
 
+    for(;;) {
+        bool repeat = false;
+        for(eqbool &a : sorted_args) {
+            eqbool s = simplify(sorted_args, a);
+            if(s != a) {
+                a = s;
+                if(!s.is_const())
+                    repeat = true;
+            }
+        }
+
+        if(!repeat)
+            break;
+    }
+
     // TODO: We can reuse 'sorted_args'.
     std::vector<eqbool> selected_args;
     for(eqbool a : sorted_args) {
-        check(a);
-        a = simplify(selected_args, a);
         if(a.is_true())
             return eqtrue;
         if(!a.is_false())
@@ -100,63 +173,59 @@ eqbool eqbool_context::get_and(args_ref args) {
     return ~get_or(or_args);
 }
 
-eqbool eqbool_context::simplify(args_ref falses, eqbool e) {
+bool eqbool_context::contains_another(args_ref args, const eqbool &e) const {
+    for(const eqbool &a : args) {
+        if(&a == &e)
+            continue;
+        if(a == e)
+            return true;
+        if(!a.is_inversion()) {
+            const node_def &def = a.get_def();
+            if(def.kind == node_kind::or_node &&
+                    contains_another(def.args, e)) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+eqbool eqbool_context::simplify(args_ref falses, const eqbool &e) const {
     if(e.is_const())
         return e;
 
-    for(eqbool f : falses) {
-        if(f == e)
-            return eqfalse;
+    if(contains_another(falses, e))
+        return eqfalse;
+    if(contains_another(falses, ~e))
+        return eqtrue;
 
-        eqbool p = ~f;
-        if(p == e)
-            return eqtrue;
-
-        // Dive into nested OR nodes.
-        if(p.is_inversion()) {
-            const node_def &def = (~p).get_def();
-            if(def.kind == node_kind::or_node) {
-                eqbool s = simplify(def.args, e);
-                if(s != e)
-                    return simplify(falses, s);
+    if(!e.is_inversion()) {
+        const node_def &def = e.get_def();
+        if(def.kind == node_kind::or_node) {
+            for(eqbool a : def.args) {
+                if(contains_another(falses, ~a))
+                    return eqtrue;
+            }
+            if(def.args.size() == 2) {
+                if(contains_another(falses, def.args[0]))
+                    return def.args[1];
+                if(contains_another(falses, def.args[1]))
+                    return def.args[0];
             }
         }
+        return e;
+    }
 
-        if(!e.is_inversion()) {
-            const node_def &def = e.get_def();
-            if(def.kind == node_kind::or_node) {
-                // e = (or A B), p = ~A/~B  =>  e = B/A
-                if(def.args.size() == 2) {
-                    if(def.args[0] == ~p)
-                        return simplify(falses, def.args[1]);
-                    if(def.args[1] == ~p)
-                        return simplify(falses, def.args[0]);
-                }
-
-                // e = (or A...), p in A...  =>  e = 1
-                // TODO: Can we use ordering to find matches quicker?
-                for(eqbool a : def.args) {
-                    if(a == p)
-                        return eqtrue;
-                }
-            }
-        } else {
-            // e = (and A...), ~p in A...  =>  e = 0
-            const node_def &def = (~e).get_def();
-            if(def.kind == node_kind::or_node) {
-                // e = (and A B), p = A/B  =>  e = B/A
-                if(def.args.size() == 2) {
-                    if(def.args[0] == ~p)
-                        return simplify(falses, ~def.args[1]);
-                    if(def.args[1] == ~p)
-                        return simplify(falses, ~def.args[0]);
-                }
-
-                for(eqbool or_a : def.args) {
-                    eqbool a = ~or_a;
-                    if(a == f)
-                        return eqfalse;
-                }
+    const node_def &def = (~e).get_def();
+    if(def.kind == node_kind::or_node) {
+        for(eqbool a : def.args) {
+            if(contains_another(falses, ~a))
+                return eqfalse;
+            if(def.args.size() == 2) {
+                if(contains_another(falses, def.args[0]))
+                    return ~def.args[1];
+                if(contains_another(falses, def.args[1]))
+                    return ~def.args[0];
             }
         }
     }

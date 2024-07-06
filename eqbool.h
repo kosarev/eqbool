@@ -68,6 +68,24 @@ enum class node_kind { none, or_node, ifelse };
 
 constexpr uintptr_t inversion_flag = 1;
 
+struct node_def;
+
+struct hasher {
+    template <class T>
+    static void hash(std::size_t &seed, const T &v) {
+        std::hash<T> h;
+        seed ^= h(v) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+    }
+
+    static void flatten_args(std::vector<eqbool> &flattened, args_ref args);
+
+    std::size_t operator () (const node_def &def) const;
+};
+
+struct matcher {
+    bool operator () (const node_def &a, const node_def &b) const;
+};
+
 struct node_def {
     eqbool_context *context = nullptr;
     std::size_t id = 0;
@@ -84,20 +102,6 @@ struct node_def {
         assert(context);
         return *context;
     }
-
-    struct hasher {
-        template <class T>
-        static void hash(std::size_t &seed, const T &v) {
-            std::hash<T> h;
-            seed ^= h(v) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
-        }
-
-        std::size_t operator () (const node_def &def) const;
-    };
-
-    struct matcher {
-        bool operator () (const node_def &a, const node_def &b) const;
-    };
 };
 
 }  // namespace detail
@@ -144,7 +148,7 @@ private:
     }
 
     friend class eqbool_context;
-    friend struct node_def::hasher;
+    friend struct detail::hasher;
 
 public:
     eqbool() = default;
@@ -194,7 +198,7 @@ public:
     size_t size() const { return xsize; }
     bool empty() const { return size() == 0; }
 
-    eqbool operator [] (size_t i) const {  return ptr[i]; }
+    const eqbool &operator [] (size_t i) const {  return ptr[i]; }
 
     const eqbool *begin() const { return data(); }
     const eqbool *end() const { return data() + size(); }
@@ -211,7 +215,7 @@ class eqbool_context {
 private:
     using node_def = detail::node_def;
 
-    std::unordered_set<node_def, node_def::hasher, node_def::matcher> defs;
+    std::unordered_set<node_def, detail::hasher, detail::matcher> defs;
 
     eqbool_stats stats;
 
@@ -228,8 +232,10 @@ private:
     int skip_not(eqbool &e,
                  std::unordered_map<const node_def*, int> &literals);
 
+    bool contains_another(args_ref args, const eqbool &e) const;
+
     // Attempts to simplify e given falses are all false.
-    eqbool simplify(args_ref falses, eqbool e);
+    eqbool simplify(args_ref falses, const eqbool &e) const;
 
     std::ostream &dump_helper(std::ostream &s, eqbool e, bool subexpr,
         const std::unordered_map<const node_def*, unsigned> &ids,
@@ -276,22 +282,6 @@ inline detail::node_def::node_def(node_kind kind, args_ref args,
                                   eqbool_context &context)
     : context(&context), kind(kind), args(args.begin(), args.end())
 {}
-
-inline std::size_t
-detail::node_def::hasher::operator () (const node_def &def) const {
-    std::size_t h = 0;
-    hash(h, def.kind);
-    hash(h, def.term);
-    for(eqbool a : def.args)
-        hash(h, a.def_code);
-    return h;
-}
-
-inline bool detail::node_def::matcher::operator () (const node_def &a,
-                                                    const node_def &b) const {
-    assert(&a.get_context() == &b.get_context());
-    return a.kind == b.kind && a.term == b.term && a.args == b.args;
-}
 
 inline bool eqbool::is_false() const {
     return get_context().is_false(*this);
