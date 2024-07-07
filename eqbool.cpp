@@ -221,12 +221,12 @@ eqbool eqbool_context::simplify(args_ref falses, const eqbool &e) const {
         for(eqbool a : def.args) {
             if(contains_another(falses, ~a))
                 return eqfalse;
-            if(def.args.size() == 2) {
-                if(contains_another(falses, def.args[0]))
-                    return ~def.args[1];
-                if(contains_another(falses, def.args[1]))
-                    return ~def.args[0];
-            }
+        }
+        if(def.args.size() == 2) {
+            if(contains_another(falses, def.args[0]))
+                return ~def.args[1];
+            if(contains_another(falses, def.args[1]))
+                return ~def.args[0];
         }
     }
 
