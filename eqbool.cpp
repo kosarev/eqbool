@@ -97,7 +97,7 @@ eqbool eqbool_context::get(const char *term) {
     return eqbool(add_def(node_def(term, *this)));
 }
 
-eqbool eqbool_context::get_or(args_ref args) {
+eqbool eqbool_context::get_or(args_ref args, bool invert_args) {
     for(eqbool a : args)
         check(a);
 
@@ -105,6 +105,11 @@ eqbool eqbool_context::get_or(args_ref args) {
     // depend on the order they are specified in.
     std::vector<eqbool> sorted_args(args.begin(), args.end());
     std::sort(sorted_args.begin(), sorted_args.end());
+
+    if(invert_args) {
+        for(eqbool &a : sorted_args)
+            a = ~a;
+    }
 
     for(;;) {
         bool repeat = false;
@@ -162,15 +167,6 @@ eqbool eqbool_context::get_or(args_ref args) {
 
     node_def def(node_kind::or_node, selected_args, *this);
     return eqbool(add_def(def));
-}
-
-eqbool eqbool_context::get_and(args_ref args) {
-    std::vector<eqbool> or_args(args.begin(), args.end());
-    for(eqbool &a : or_args) {
-        check(a);
-        a = ~a;
-    }
-    return ~get_or(or_args);
 }
 
 bool eqbool_context::contains_another(args_ref args, const eqbool &e) const {

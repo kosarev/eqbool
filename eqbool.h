@@ -252,9 +252,11 @@ public:
     eqbool get(bool b) { return b ? get_true() : get_false(); }
     eqbool get(const char *term);
 
-    eqbool get_or(args_ref args);
+    eqbool get_or(args_ref args, bool invert_args = false);
     eqbool get_or(eqbool a, eqbool b) { return get_or({a, b}); }
-    eqbool get_and(args_ref args);
+    eqbool get_and(args_ref args, bool invert_args = false) {
+        return ~get_or(args, !invert_args);
+    }
     eqbool get_and(eqbool a, eqbool b) { return get_and({a, b}); }
     eqbool ifelse(eqbool i, eqbool t, eqbool e);
 
