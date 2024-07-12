@@ -48,7 +48,10 @@ std::size_t detail::hasher::operator () (const node_def &def) const {
     hash(h, def.kind);
     hash(h, def.term);
 
-    if(def.kind == node_kind::ifelse) {
+    if(def.kind == node_kind::eq) {
+        hash(h, def.args[0].def_code);
+        hash(h, def.args[1].def_code);
+    } else if(def.kind == node_kind::ifelse) {
         hash(h, def.args[0].def_code);
         hash(h, def.args[1].def_code);
         hash(h, def.args[2].def_code);
@@ -74,7 +77,7 @@ inline bool detail::matcher::operator () (const node_def &a,
     if(a.kind == node_kind::none)
         return true;
 
-    if(a.kind == node_kind::ifelse)
+    if(a.kind == node_kind::ifelse || a.kind == node_kind::eq)
         return a.args == b.args;
 
     assert(a.kind == node_kind::or_node);
@@ -197,6 +200,12 @@ eqbool eqbool_context::simplify(args_ref falses, const eqbool &e) const {
 
     if(!e.is_inversion()) {
         const node_def &def = e.get_def();
+        if(def.kind == node_kind::ifelse) {
+            if(contains_another(falses, ~def.args[0]))
+                return def.args[1];
+            if(contains_another(falses, def.args[0]))
+                return def.args[2];
+        }
         if(def.kind == node_kind::or_node) {
             for(eqbool a : def.args) {
                 if(contains_another(falses, ~a))
@@ -213,6 +222,18 @@ eqbool eqbool_context::simplify(args_ref falses, const eqbool &e) const {
     }
 
     const node_def &def = (~e).get_def();
+    if(def.kind == node_kind::eq) {
+        if(contains_another(falses, ~def.args[0]))
+            return ~def.args[1];
+        if(contains_another(falses, ~def.args[1]))
+            return ~def.args[0];
+    }
+    if(def.kind == node_kind::ifelse) {
+        if(contains_another(falses, ~def.args[0]))
+            return ~def.args[1];
+        if(contains_another(falses, def.args[0]))
+            return ~def.args[2];
+    }
     if(def.kind == node_kind::or_node) {
         for(eqbool a : def.args) {
             if(contains_another(falses, ~a))
@@ -234,21 +255,18 @@ eqbool eqbool_context::ifelse(eqbool i, eqbool t, eqbool e) {
     check(t);
     check(e);
 
-    t = simplify({~i}, t);
-    e = simplify({i}, e);
-
-    // (ifelse A (ifelse A B C) D) => (ifelse A B D)
-    if(!t.is_inversion()) {
-        const node_def &def = t.get_def();
-        if(def.kind == node_kind::ifelse && def.args[0] == i)
-            t = def.args[1];
+    for(;;) {
+        eqbool s = simplify({~i}, t);
+        if(s == t)
+            break;
+        t = s;
     }
 
-    // (ifelse A B (ifelse A C D)) => (ifelse A B D)
-    if(!e.is_inversion()) {
-        const node_def &def = e.get_def();
-        if(def.kind == node_kind::ifelse && def.args[0] == i)
-            e = def.args[2];
+    for(;;) {
+        eqbool s = simplify({i}, e);
+        if(s == e)
+            break;
+        e = s;
     }
 
     if(i == t)
@@ -278,8 +296,12 @@ eqbool eqbool_context::ifelse(eqbool i, eqbool t, eqbool e) {
     if(e.is_const())
         return e.is_false() ? (i & t) : (~i | t);
 
-    if(t == ~e && t < i)
-        std::tie(i, t, e) = std::make_tuple(t, i, ~i);
+    if(t == ~e) {
+        if(t < i)
+            std::swap(i, t);
+        node_def def(node_kind::eq, {i, t}, *this);
+        return eqbool(add_def(def));
+    }
 
     if(i.is_inversion())
         std::tie(i, t, e) = std::make_tuple(~i, e, t);
@@ -362,10 +384,11 @@ bool eqbool_context::is_unsat(eqbool e) {
             solver->add(0);
             ++stats.num_clauses;
             continue; }
-        case node_kind::ifelse: {
+        case node_kind::ifelse:
+        case node_kind::eq: {
             eqbool i_arg = def.args[0];
             eqbool t_arg = def.args[1];
-            eqbool e_arg = def.args[2];
+            eqbool e_arg = def.kind == node_kind::ifelse ? def.args[2] : ~def.args[1];
             int i_lit = skip_not(i_arg, literals);
             int t_lit = skip_not(t_arg, literals);
             int e_lit = skip_not(e_arg, literals);
@@ -444,6 +467,7 @@ std::ostream &eqbool_context::dump_helper(
         return s << def.term;
     case node_kind::or_node:
     case node_kind::ifelse:
+    case node_kind::eq:
         if(subexpr) {
             auto i = ids.find(&def);
             if(i != ids.end()) {
@@ -457,7 +481,8 @@ std::ostream &eqbool_context::dump_helper(
             s << "(";
         s << (is_and ? "and" :
               def.kind == node_kind::or_node ? "or" :
-              "ifelse");
+              def.kind == node_kind::ifelse ? "ifelse" :
+              "eq");
         for(eqbool a : def.args) {
             s << " ";
             if(is_and)
@@ -489,6 +514,7 @@ std::ostream &eqbool_context::dump(std::ostream &s, eqbool e) const {
             continue;
         case node_kind::or_node:
         case node_kind::ifelse:
+        case node_kind::eq:
             bool inserted = seen.insert(def).second;
             if(!inserted) {
                 unsigned &id = ids[def];

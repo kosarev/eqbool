@@ -29,6 +29,10 @@ assert_is (or A (and ~A B)) (or A B)
 
 assert_is (or (and A B) (and ~A C)) (ifelse A B C)
 
+assert_is (or ~B ~(ifelse A B ~B)) (or ~A ~B)
+
+assert_is (ifelse (or ~A B) A ~(or ~A ~B)) (and A B)
+
 # Use a new node to ensure the arguments come in the specified
 # order before simplification, which is critical for this test.
 def X

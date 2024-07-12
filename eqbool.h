@@ -64,7 +64,7 @@ public:
 
 namespace detail {
 
-enum class node_kind { none, or_node, ifelse };
+enum class node_kind { none, or_node, ifelse, eq };
 
 constexpr uintptr_t inversion_flag = 1;
 
