@@ -291,81 +291,45 @@ eqbool eqbool_context::simplify(args_ref args, const eqbool &e) const {
     if(is_known_false(args, excluded, ~e))
         return eqtrue;
 
-    if(!e.is_inversion()) {
-        const node_def &def = e.get_def();
-        if(def.kind == node_kind::ifelse) {
-            if(is_known_false(args, excluded, ~def.args[0]))
-                return def.args[1];
-            if(is_known_false(args, excluded, def.args[0]))
-                return def.args[2];
-        }
-        if(def.kind == node_kind::or_node) {
-            for(eqbool a : def.args) {
-                if(is_known_false(args, excluded, ~a))
-                    return eqtrue;
-            }
-            if(def.args.size() == 2) {
-                std::vector<eqbool> eqs0;
-                if(eqbool r = get_eqs(args, excluded, def.args[0], eqs0)) {
-                    assert(r.is_false());
-                    return def.args[1];
-                }
-                if(contains(eqs0, def.args[1]))
-                    return def.args[0];
-                if(contains(eqs0, ~def.args[1]))
-                    return eqtrue;
-
-                std::vector<eqbool> eqs1;
-                if(eqbool r = get_eqs(args, excluded, def.args[1], eqs1)) {
-                    assert(r.is_false());
-                    return def.args[0];
-                }
-            }
-        }
-        return e;
-    }
-
-    const node_def &def = (~e).get_def();
+    bool inv = e.is_inversion();
+    const node_def &def = (inv ? ~e : e).get_def();
     if(def.kind == node_kind::eq) {
         if(is_known_false(args, excluded, def.args[0]))
-            return def.args[1];
+            return inv ? def.args[1] : ~def.args[1];
         if(is_known_false(args, excluded, ~def.args[0]))
-            return ~def.args[1];
+            return inv ? ~def.args[1] : def.args[1];
         if(is_known_false(args, excluded, def.args[1]))
-            return def.args[0];
+            return inv ? def.args[0] : ~def.args[0];
         if(is_known_false(args, excluded, ~def.args[1]))
-            return ~def.args[0];
-    }
-    if(def.kind == node_kind::ifelse) {
+            return inv ? ~def.args[0] : def.args[0];
+    } else if(def.kind == node_kind::ifelse) {
         if(is_known_false(args, excluded, ~def.args[0]))
-            return ~def.args[1];
+            return inv ? ~def.args[1] : def.args[1];
         if(is_known_false(args, excluded, def.args[0]))
-            return ~def.args[2];
-    }
-    if(def.kind == node_kind::or_node) {
+            return inv ? ~def.args[2] : def.args[2];
+    } else if(def.kind == node_kind::or_node) {
         for(eqbool a : def.args) {
             if(is_known_false(args, excluded, ~a))
-                return eqfalse;
+                return inv ? eqfalse : eqtrue;
         }
         if(def.args.size() == 2) {
             std::vector<eqbool> eqs0;
             if(eqbool r = get_eqs(args, excluded, def.args[0], eqs0)) {
                 assert(r.is_false());
-                return ~def.args[1];
+                return inv ? ~def.args[1] : def.args[1];
             }
             if(contains(eqs0, def.args[1]))
-                return ~def.args[0];
+                return inv ? ~def.args[0] : def.args[0];
             if(contains(eqs0, ~def.args[1]))
-                return eqfalse;
+                return inv ? eqfalse : eqtrue;
 
             std::vector<eqbool> eqs1;
             if(eqbool r = get_eqs(args, excluded, def.args[1], eqs1)) {
                 assert(r.is_false());
-                return ~def.args[0];
+                return inv ? ~def.args[0] : def.args[0];
             }
         }
     }
-
     return e;
 }
 
