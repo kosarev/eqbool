@@ -29,6 +29,15 @@ namespace eqbool {
 using detail::node_def;
 using detail::node_kind;
 
+namespace {
+
+template<typename C, typename E>
+bool contains(const C &c, const E &e) {
+    return std::find(c.begin(), c.end(), e) != c.end();
+}
+
+}
+
 void detail::hasher::flatten_args(std::vector<eqbool> &flattened, args_ref args) {
     for(eqbool a : args) {
         if(!a.is_inversion()) {
@@ -208,50 +217,109 @@ eqbool eqbool_context::get_or(args_ref args, bool invert_args) {
     return add_def(def);
 }
 
-bool eqbool_context::contains_another(args_ref args, const eqbool &e) const {
-    for(const eqbool &a : args) {
-        if(&a == &e)
+void eqbool_context::add_eq(const std::vector<eqbool> &eqs,
+                            std::vector<eqbool> &new_eqs, eqbool e) {
+    if(!contains(eqs, e) && !contains(new_eqs, e))
+        new_eqs.push_back(e);
+}
+
+eqbool eqbool_context::get_eqs(args_ref args, const eqbool &excluded,
+                               const std::vector<eqbool> &eqs,
+                               std::vector<eqbool> &new_eqs) const {
+   for(const eqbool &a : args) {
+        if(&a == &excluded)
             continue;
-        if(a == e)
-            return true;
-        if(!a.is_inversion()) {
-            const node_def &def = a.get_def();
-            if(def.kind == node_kind::or_node &&
-                    contains_another(def.args, e)) {
-                return true;
-            }
+
+        if(contains(eqs, a))
+            return eqfalse;
+        if(contains(eqs, ~a))
+            return eqtrue;
+
+        bool inv = a.is_inversion();
+        const node_def &def = (inv ? ~a : a).get_def();
+        if(def.kind == node_kind::eq) {
+            if(contains(eqs, def.args[0]))
+                add_eq(eqs, new_eqs, inv ? def.args[1] : ~def.args[1]);
+            if(contains(eqs, ~def.args[0]))
+                add_eq(eqs, new_eqs, inv ? ~def.args[1] : def.args[1]);
+            if(contains(eqs, def.args[1]))
+                add_eq(eqs, new_eqs, inv ? def.args[0] : ~def.args[0]);
+            if(contains(eqs, ~def.args[1]))
+                add_eq(eqs, new_eqs, inv ? ~def.args[0] : def.args[0]);
+        } else if(!inv && def.kind == node_kind::or_node) {
+            if (eqbool r = get_eqs(def.args, excluded, eqs, new_eqs))
+                return r;
         }
     }
+
+    return {};
+}
+
+eqbool eqbool_context::get_eqs(args_ref args, const eqbool &excluded,
+                               eqbool e, std::vector<eqbool> &eqs) const {
+    eqs = {e};
+    for(;;) {
+        std::vector<eqbool> new_eqs;
+        if(eqbool r = get_eqs(args, excluded, eqs, new_eqs))
+            return r;
+
+        if(!new_eqs.size())
+            break;
+
+        eqs.insert(eqs.end(), new_eqs.begin(), new_eqs.end());
+    }
+
+    return {};
+}
+
+bool eqbool_context::is_known_false(args_ref args, const eqbool &excluded,
+                                    eqbool e) const {
+    std::vector<eqbool> eqs;
+    if(eqbool r = get_eqs(args, excluded, e, eqs))
+        return r.is_false();
+
     return false;
 }
 
-eqbool eqbool_context::simplify(args_ref falses, const eqbool &e) const {
+eqbool eqbool_context::simplify(args_ref args, const eqbool &e) const {
     if(e.is_const())
         return e;
 
-    if(contains_another(falses, e))
+    const eqbool &excluded = e;
+    if(is_known_false(args, excluded, e))
         return eqfalse;
-    if(contains_another(falses, ~e))
+    if(is_known_false(args, excluded, ~e))
         return eqtrue;
 
     if(!e.is_inversion()) {
         const node_def &def = e.get_def();
         if(def.kind == node_kind::ifelse) {
-            if(contains_another(falses, ~def.args[0]))
+            if(is_known_false(args, excluded, ~def.args[0]))
                 return def.args[1];
-            if(contains_another(falses, def.args[0]))
+            if(is_known_false(args, excluded, def.args[0]))
                 return def.args[2];
         }
         if(def.kind == node_kind::or_node) {
             for(eqbool a : def.args) {
-                if(contains_another(falses, ~a))
+                if(is_known_false(args, excluded, ~a))
                     return eqtrue;
             }
             if(def.args.size() == 2) {
-                if(contains_another(falses, def.args[0]))
+                std::vector<eqbool> eqs0;
+                if(eqbool r = get_eqs(args, excluded, def.args[0], eqs0)) {
+                    assert(r.is_false());
                     return def.args[1];
-                if(contains_another(falses, def.args[1]))
+                }
+                if(contains(eqs0, def.args[1]))
                     return def.args[0];
+                if(contains(eqs0, ~def.args[1]))
+                    return eqtrue;
+
+                std::vector<eqbool> eqs1;
+                if(eqbool r = get_eqs(args, excluded, def.args[1], eqs1)) {
+                    assert(r.is_false());
+                    return def.args[0];
+                }
             }
         }
         return e;
@@ -259,27 +327,42 @@ eqbool eqbool_context::simplify(args_ref falses, const eqbool &e) const {
 
     const node_def &def = (~e).get_def();
     if(def.kind == node_kind::eq) {
-        if(contains_another(falses, ~def.args[0]))
+        if(is_known_false(args, excluded, def.args[0]))
+            return def.args[1];
+        if(is_known_false(args, excluded, ~def.args[0]))
             return ~def.args[1];
-        if(contains_another(falses, ~def.args[1]))
+        if(is_known_false(args, excluded, def.args[1]))
+            return def.args[0];
+        if(is_known_false(args, excluded, ~def.args[1]))
             return ~def.args[0];
     }
     if(def.kind == node_kind::ifelse) {
-        if(contains_another(falses, ~def.args[0]))
+        if(is_known_false(args, excluded, ~def.args[0]))
             return ~def.args[1];
-        if(contains_another(falses, def.args[0]))
+        if(is_known_false(args, excluded, def.args[0]))
             return ~def.args[2];
     }
     if(def.kind == node_kind::or_node) {
         for(eqbool a : def.args) {
-            if(contains_another(falses, ~a))
+            if(is_known_false(args, excluded, ~a))
                 return eqfalse;
         }
         if(def.args.size() == 2) {
-            if(contains_another(falses, def.args[0]))
+            std::vector<eqbool> eqs0;
+            if(eqbool r = get_eqs(args, excluded, def.args[0], eqs0)) {
+                assert(r.is_false());
                 return ~def.args[1];
-            if(contains_another(falses, def.args[1]))
+            }
+            if(contains(eqs0, def.args[1]))
                 return ~def.args[0];
+            if(contains(eqs0, ~def.args[1]))
+                return eqfalse;
+
+            std::vector<eqbool> eqs1;
+            if(eqbool r = get_eqs(args, excluded, def.args[1], eqs1)) {
+                assert(r.is_false());
+                return ~def.args[0];
+            }
         }
     }
 

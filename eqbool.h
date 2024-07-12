@@ -233,10 +233,20 @@ private:
     int skip_not(eqbool &e,
                  std::unordered_map<const node_def*, int> &literals);
 
-    bool contains_another(args_ref args, const eqbool &e) const;
+    static void add_eq(const std::vector<eqbool> &eqs,
+                       std::vector<eqbool> &new_eqs, eqbool e);
 
-    // Attempts to simplify e given falses are all false.
-    eqbool simplify(args_ref falses, const eqbool &e) const;
+    eqbool get_eqs(args_ref args, const eqbool &excluded,
+                   const std::vector<eqbool> &eqs,
+                   std::vector<eqbool> &new_eqs) const;
+
+    eqbool get_eqs(args_ref args, const eqbool &excluded,
+                   eqbool e, std::vector<eqbool> &eqs) const;
+
+    bool is_known_false(args_ref args, const eqbool &excluded, eqbool e) const;
+
+    // Attempts to simplify e given all other args are all false.
+    eqbool simplify(args_ref args, const eqbool &e) const;
 
     std::ostream &dump_helper(std::ostream &s, eqbool e, bool subexpr,
         const std::unordered_map<const node_def*, unsigned> &ids,
