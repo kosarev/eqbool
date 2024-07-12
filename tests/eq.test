@@ -16,3 +16,8 @@ assert_is (eq A A) 1
 assert_is (or (eq A B) ~(or A B)) (eq A B)
 
 assert_is (eq A (eq A ~B)) ~B
+
+def A2
+def B2
+def T2 (and ~(and B2 ~A2) ~(and A2 ~B2))
+assert_is (eq ~T2 B2) (eq B2 ~T2)

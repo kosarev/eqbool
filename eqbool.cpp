@@ -386,8 +386,30 @@ eqbool eqbool_context::ifelse(eqbool i, eqbool t, eqbool e) {
     if(t == ~e) {
         if(t < i)
             std::swap(i, t);
+
+        bool inv = false;
+        if(i.is_inversion()) {
+            i = ~i;
+            inv = !inv;
+        }
+        if(t.is_inversion()) {
+            t = ~t;
+            inv = !inv;
+        }
+
+        // We only consider the case when t contain i, because we
+        // know i was created before t (i < t).
+        const node_def &t_def = t.get_def();
+        if(t_def.kind == node_kind::eq) {
+            if(t_def.args[0] == i)
+                return inv ? ~t_def.args[1] : t_def.args[1];
+            if(t_def.args[1] == i)
+                return inv ? ~t_def.args[0] : t_def.args[0];
+        }
+
         node_def def(node_kind::eq, {i, t}, *this);
-        return add_def(def);
+        eqbool r = add_def(def);
+        return inv ? ~r : r;
     }
 
     if(i.is_inversion())
