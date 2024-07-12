@@ -453,6 +453,9 @@ bool eqbool_context::is_equiv(eqbool a, eqbool b) {
     bool equiv = is_unsat(~eq);
 
     if(equiv) {
+        if(a < b)
+            std::swap(a, b);
+
         if(a.is_inversion()) {
             a = ~a;
             b = ~b;
