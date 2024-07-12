@@ -480,6 +480,9 @@ bool eqbool_context::is_unsat(eqbool e) {
 }
 
 bool eqbool_context::is_equiv(eqbool a, eqbool b) {
+    a = get_simplest(a);
+    b = get_simplest(b);
+
     eqbool eq = get_eq(a, b);
     if(eq.is_const())
         return eq.is_true();
