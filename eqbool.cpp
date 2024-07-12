@@ -89,15 +89,21 @@ inline bool detail::matcher::operator () (const node_def &a,
     return a_args == b_args;
 }
 
-const node_def &eqbool_context::add_def(node_def def) {
-    // Store node definitions as keys in a hash table and map
-    // them to pointers to themselves.
+eqbool eqbool_context::add_def(node_def def) {
     def.id = defs.size();
-    return *defs.insert(def).first;
+    auto r = defs.insert({def, eqbool()});
+    auto &i = r.first;
+    eqbool &value = i->second;
+    bool inserted = r.second;
+    if(inserted) {
+        const node_def *key = &i->first;
+        value = eqbool(*key);
+    }
+    return value;
 }
 
 eqbool eqbool_context::get(const char *term) {
-    return eqbool(add_def(node_def(term, *this)));
+    return add_def(node_def(term, *this));
 }
 
 eqbool eqbool_context::get_or(args_ref args, bool invert_args) {
@@ -169,7 +175,7 @@ eqbool eqbool_context::get_or(args_ref args, bool invert_args) {
     std::sort(selected_args.begin(), selected_args.end());
 
     node_def def(node_kind::or_node, selected_args, *this);
-    return eqbool(add_def(def));
+    return add_def(def);
 }
 
 bool eqbool_context::contains_another(args_ref args, const eqbool &e) const {
@@ -300,14 +306,14 @@ eqbool eqbool_context::ifelse(eqbool i, eqbool t, eqbool e) {
         if(t < i)
             std::swap(i, t);
         node_def def(node_kind::eq, {i, t}, *this);
-        return eqbool(add_def(def));
+        return add_def(def);
     }
 
     if(i.is_inversion())
         std::tie(i, t, e) = std::make_tuple(~i, e, t);
 
     node_def def(node_kind::ifelse, {i, t, e}, *this);
-    return eqbool(add_def(def));
+    return add_def(def);
 }
 
 static int get_literal(const node_def *def,
@@ -440,7 +446,22 @@ bool eqbool_context::is_unsat(eqbool e) {
 }
 
 bool eqbool_context::is_equiv(eqbool a, eqbool b) {
-    return is_unsat(~get_eq(a, b));
+    eqbool eq = get_eq(a, b);
+    if(eq.is_const())
+        return eq.is_true();
+
+    bool equiv = is_unsat(~eq);
+
+    if(equiv) {
+        if(a.is_inversion()) {
+            a = ~a;
+            b = ~b;
+        }
+
+        defs[a.get_def()] = b;
+    }
+
+    return equiv;
 }
 
 std::ostream &eqbool_context::dump_helper(
