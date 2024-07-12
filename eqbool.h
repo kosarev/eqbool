@@ -228,6 +228,8 @@ private:
         assert(&e.get_context() == this);
     }
 
+    eqbool get_simplest(eqbool e);
+
     int skip_not(eqbool &e,
                  std::unordered_map<const node_def*, int> &literals);
 

@@ -93,13 +93,45 @@ eqbool eqbool_context::add_def(node_def def) {
     def.id = defs.size();
     auto r = defs.insert({def, eqbool()});
     auto &i = r.first;
+    const node_def *key = &i->first;
     eqbool &value = i->second;
     bool inserted = r.second;
     if(inserted) {
-        const node_def *key = &i->first;
         value = eqbool(*key);
+        return value;
     }
+
+    if(!value.is_inversion() && &value.get_def() == key)
+        return value;
+
+    // The node definition refers to an equivalent but different
+    // and simpler eqbool value. See if that simpler value does
+    // itself have a simpler version and if so, propagate.
+    eqbool v = value;
+    bool inv = false;
+
+    for(;;) {
+        if(v.is_inversion()) {
+            v = ~v;
+            inv = !inv;
+        }
+
+        eqbool s = defs[v.get_def()];
+        if(s == v)
+            break;
+
+        v = s;
+    }
+
+    value = inv ? ~v : v;
+
     return value;
+}
+
+eqbool eqbool_context::get_simplest(eqbool e) {
+    bool inv = e.is_inversion();
+    eqbool s = add_def((inv ? ~e : e).get_def());
+    return inv ? ~s : s;
 }
 
 eqbool eqbool_context::get(const char *term) {
@@ -115,10 +147,8 @@ eqbool eqbool_context::get_or(args_ref args, bool invert_args) {
     std::vector<eqbool> sorted_args(args.begin(), args.end());
     std::sort(sorted_args.begin(), sorted_args.end());
 
-    if(invert_args) {
-        for(eqbool &a : sorted_args)
-            a = ~a;
-    }
+    for(eqbool &a : sorted_args)
+        a = get_simplest(invert_args ? ~a : a);
 
     for(;;) {
         bool repeat = false;
@@ -260,6 +290,10 @@ eqbool eqbool_context::ifelse(eqbool i, eqbool t, eqbool e) {
     check(i);
     check(t);
     check(e);
+
+    i = get_simplest(i);
+    t = get_simplest(t);
+    e = get_simplest(e);
 
     for(;;) {
         eqbool s = simplify({~i}, t);
