@@ -233,12 +233,10 @@ private:
     int skip_not(eqbool &e,
                  std::unordered_map<const node_def*, int> &literals);
 
-    static void add_eq(const std::vector<eqbool> &eqs,
-                       std::vector<eqbool> &new_eqs, eqbool e);
+    static void add_eq(std::vector<eqbool> &eqs, eqbool e);
 
     eqbool get_eqs(args_ref args, const eqbool &excluded,
-                   const std::vector<eqbool> &eqs,
-                   std::vector<eqbool> &new_eqs) const;
+                   std::vector<eqbool> &eqs) const;
 
     eqbool get_eqs(args_ref args, const eqbool &excluded,
                    eqbool e, std::vector<eqbool> &eqs) const;

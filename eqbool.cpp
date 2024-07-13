@@ -217,15 +217,13 @@ eqbool eqbool_context::get_or(args_ref args, bool invert_args) {
     return add_def(def);
 }
 
-void eqbool_context::add_eq(const std::vector<eqbool> &eqs,
-                            std::vector<eqbool> &new_eqs, eqbool e) {
-    if(!contains(eqs, e) && !contains(new_eqs, e))
-        new_eqs.push_back(e);
+void eqbool_context::add_eq(std::vector<eqbool> &eqs, eqbool e) {
+    if(!contains(eqs, e))
+        eqs.push_back(e);
 }
 
 eqbool eqbool_context::get_eqs(args_ref args, const eqbool &excluded,
-                               const std::vector<eqbool> &eqs,
-                               std::vector<eqbool> &new_eqs) const {
+                               std::vector<eqbool> &eqs) const {
    for(const eqbool &a : args) {
         if(&a == &excluded)
             continue;
@@ -239,15 +237,15 @@ eqbool eqbool_context::get_eqs(args_ref args, const eqbool &excluded,
         const node_def &def = (inv ? ~a : a).get_def();
         if(def.kind == node_kind::eq) {
             if(contains(eqs, def.args[0]))
-                add_eq(eqs, new_eqs, inv ? def.args[1] : ~def.args[1]);
+                add_eq(eqs, inv ? def.args[1] : ~def.args[1]);
             if(contains(eqs, ~def.args[0]))
-                add_eq(eqs, new_eqs, inv ? ~def.args[1] : def.args[1]);
+                add_eq(eqs, inv ? ~def.args[1] : def.args[1]);
             if(contains(eqs, def.args[1]))
-                add_eq(eqs, new_eqs, inv ? def.args[0] : ~def.args[0]);
+                add_eq(eqs, inv ? def.args[0] : ~def.args[0]);
             if(contains(eqs, ~def.args[1]))
-                add_eq(eqs, new_eqs, inv ? ~def.args[0] : def.args[0]);
+                add_eq(eqs, inv ? ~def.args[0] : def.args[0]);
         } else if(!inv && def.kind == node_kind::or_node) {
-            if (eqbool r = get_eqs(def.args, excluded, eqs, new_eqs))
+            if (eqbool r = get_eqs(def.args, excluded, eqs))
                 return r;
         }
     }
@@ -259,14 +257,12 @@ eqbool eqbool_context::get_eqs(args_ref args, const eqbool &excluded,
                                eqbool e, std::vector<eqbool> &eqs) const {
     eqs = {e};
     for(;;) {
-        std::vector<eqbool> new_eqs;
-        if(eqbool r = get_eqs(args, excluded, eqs, new_eqs))
+        std::size_t num_eqs = eqs.size();
+        if(eqbool r = get_eqs(args, excluded, eqs))
             return r;
 
-        if(!new_eqs.size())
+        if(eqs.size() == num_eqs)
             break;
-
-        eqs.insert(eqs.end(), new_eqs.begin(), new_eqs.end());
     }
 
     return {};
