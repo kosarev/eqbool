@@ -45,3 +45,8 @@ def XC
 def XD
 assert_is (or (or XA XB) (or XC XD)) (or XA XB XC XD)
 assert_is (or (or XA XC) (or XB XD)) (or XA XB XC XD)
+
+def A2
+def B2
+def C2
+assert_is (or ~(or A2 B2) ~(or A2 B2 C2)) ~(or A2 B2)

@@ -243,6 +243,8 @@ private:
 
     bool is_known_false(args_ref args, const eqbool &excluded, eqbool e) const;
 
+    static bool contains_all(args_ref p, args_ref q);
+
     // Attempts to simplify e given all other args are all false.
     eqbool simplify(args_ref args, const eqbool &e) const;
 

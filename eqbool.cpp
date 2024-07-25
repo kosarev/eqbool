@@ -277,6 +277,23 @@ bool eqbool_context::is_known_false(args_ref args, const eqbool &excluded,
     return false;
 }
 
+bool eqbool_context::contains_all(args_ref p, args_ref q) {
+    if(p.size() < q.size())
+        return false;
+
+    auto pi = p.begin();
+    for(eqbool qa : q) {
+        for(;;) {
+            if(pi == p.end() || *pi > qa)
+                return false;
+            if(*pi == qa)
+                break;
+            ++pi;
+        }
+    }
+    return true;
+}
+
 eqbool eqbool_context::simplify(args_ref args, const eqbool &e) const {
     if(e.is_const())
         return e;
@@ -324,6 +341,18 @@ eqbool eqbool_context::simplify(args_ref args, const eqbool &e) const {
                 assert(r.is_false());
                 return inv ? ~def.args[0] : def.args[0];
             }
+        }
+        // (or (and A...) (and A... B...) C...) => (or (and A...) C...)
+        for(const eqbool &a : args) {
+            if(&a == &excluded)
+                continue;
+            if(!a.is_inversion())
+                continue;
+            const node_def &a_def = (~a).get_def();
+            if(a_def.kind != node_kind::or_node)
+                continue;
+            if(contains_all(def.args, a_def.args))
+                return inv ? eqfalse : eqtrue;
         }
     }
     return e;
