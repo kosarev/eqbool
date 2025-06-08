@@ -92,6 +92,7 @@ set(CADICAL_SRCS
     cadical/src/decide.cpp
     cadical/src/decompose.cpp
     cadical/src/deduplicate.cpp
+    cadical/src/drattracer.cpp
     cadical/src/elim.cpp
     cadical/src/ema.cpp
     cadical/src/extend.cpp
@@ -101,15 +102,19 @@ set(CADICAL_SRCS
     cadical/src/flags.cpp
     cadical/src/flip.cpp
     cadical/src/format.cpp
+    cadical/src/frattracer.cpp
     cadical/src/gates.cpp
+    cadical/src/idruptracer.cpp
     cadical/src/instantiate.cpp
     cadical/src/internal.cpp
     cadical/src/ipasir.cpp
+    cadical/src/lidruptracer.cpp
     cadical/src/limit.cpp
     cadical/src/logging.cpp
     cadical/src/lookahead.cpp
     cadical/src/lratbuilder.cpp
     cadical/src/lratchecker.cpp
+    cadical/src/lrattracer.cpp
     cadical/src/lucky.cpp
     cadical/src/message.cpp
     cadical/src/minimize.cpp
@@ -139,10 +144,10 @@ set(CADICAL_SRCS
     cadical/src/subsume.cpp
     cadical/src/terminal.cpp
     cadical/src/ternary.cpp
-    cadical/src/tracer.cpp
     cadical/src/transred.cpp
     cadical/src/util.cpp
     cadical/src/var.cpp
+    cadical/src/veripbtracer.cpp
     cadical/src/version.cpp
     cadical/src/vivify.cpp
     cadical/src/walk.cpp
