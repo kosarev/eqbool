@@ -12,6 +12,7 @@
 #define EQBOOL_H
 
 #include <cassert>
+#include <chrono>
 #include <cstdint>
 #include <initializer_list>
 #include <string>
@@ -41,14 +42,8 @@ static inline void unused(...) {}
 
 class timer {
 private:
-    static double now() {
-        timespec t;
-        ::clock_gettime(CLOCK_MONOTONIC, &t);
-        return static_cast<double>(t.tv_sec) +
-               static_cast<double>(t.tv_nsec) / 1e9;
-    }
-
-    double start = now();
+    std::chrono::time_point<std::chrono::steady_clock> start =
+        std::chrono::steady_clock::now();
     double &total;
 
 public:
@@ -56,9 +51,11 @@ public:
     ~timer() { update(); }
 
     void update() {
-        double t = now();
-        total += t - start;
-        start = t;
+        std::chrono::time_point<std::chrono::steady_clock> now =
+            std::chrono::steady_clock::now();
+        std::chrono::duration<double> delta = now - start;
+        total += delta.count();
+        start = now;
     }
 };
 
