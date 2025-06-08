@@ -2,7 +2,7 @@
 /*  Testing boolean expressions for equivalence.
     https://github.com/kosarev/eqbool
 
-    Copyright (C) 2023 Ivan Kosarev.
+    Copyright (C) 2023-2025 Ivan Kosarev.
     mail@ivankosarev.com
 
     Published under the MIT license.
@@ -15,8 +15,6 @@
 #include <map>
 #include <sstream>
 #include <vector>
-
-#include <malloc.h>
 
 #include "eqbool.h"
 
@@ -217,8 +215,7 @@ private:
              format(static_cast<long>(stats.sat_time * 1000)) << " ms, " <<
              format(stats.num_clauses) << " clauses " <<
              format(static_cast<long>(stats.clauses_time * 1000)) << " ms, " <<
-             "other " << format(static_cast<long>(other_time * 1000)) << " ms, " <<
-             format(::mallinfo2().uordblks / 1024) << "K allocated\n";
+             "other " << format(static_cast<long>(other_time * 1000)) << " ms\n";
     }
 
     void print_stats() {
