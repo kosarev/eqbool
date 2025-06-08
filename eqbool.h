@@ -2,7 +2,7 @@
 /*  Testing boolean expressions for equivalence.
     https://github.com/kosarev/eqbool
 
-    Copyright (C) 2023 Ivan Kosarev.
+    Copyright (C) 2023-2025 Ivan Kosarev.
     mail@ivankosarev.com
 
     Published under the MIT license.
@@ -246,7 +246,7 @@ private:
 
     static bool contains_all(args_ref p, args_ref q);
 
-    // Attempts to simplify e given all other args are all false.
+    // Attempts to simplify e given all args are all false.
     eqbool simplify(args_ref args, const eqbool &e) const;
 
     std::ostream &dump_helper(std::ostream &s, eqbool e, bool subexpr,
