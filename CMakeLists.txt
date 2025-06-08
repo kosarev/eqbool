@@ -64,8 +64,7 @@ append_if(ERROR_LIMIT_FLAG "-ferror-limit=1" CXX_FLAGS)
 append_if(G_FLAG "-g" CXX_FLAGS)
 
 set(EQBOOL_SRCS
-    eqbool.cpp
-    main.cpp)
+    eqbool.cpp)
 
 set_source_files_properties(${EQBOOL_SRCS}
     PROPERTIES COMPILE_FLAGS ${CXX_FLAGS})
@@ -156,6 +155,9 @@ set(CADICAL_SRCS
 set_source_files_properties(${CADICAL_SRCS}
     PROPERTIES COMPILE_FLAGS "-DNBUILD -DQUIET")
 
-add_executable(eqbool ${EQBOOL_SRCS} ${CADICAL_SRCS})
+add_library(eqbool ${EQBOOL_SRCS} ${CADICAL_SRCS})
+
+add_executable(tester tester.cpp)
+target_link_libraries(tester eqbool)
 
 add_subdirectory(tests)

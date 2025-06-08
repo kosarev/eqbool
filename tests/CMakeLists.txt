@@ -11,5 +11,5 @@ set(TESTS
     term.test)
 
 foreach(test ${TESTS})
-    add_test(NAME ${test} COMMAND eqbool ${CMAKE_CURRENT_SOURCE_DIR}/${test})
+    add_test(NAME ${test} COMMAND tester ${CMAKE_CURRENT_SOURCE_DIR}/${test})
 endforeach()

@@ -18,6 +18,8 @@
 #include <unordered_map>
 #include <vector>
 
+#include <time.h>
+
 namespace eqbool {
 
 class args_ref;
