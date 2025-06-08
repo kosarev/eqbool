@@ -12,6 +12,7 @@
 #define EQBOOL_H
 
 #include <cassert>
+#include <cstdint>
 #include <initializer_list>
 #include <string>
 #include <unordered_map>
