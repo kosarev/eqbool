@@ -34,3 +34,5 @@ assert_is (ifelse (and A B) A ~C) (ifelse (and A B) 1 ~C)
 assert_is (ifelse A B (and A B)) (and A B)
 
 assert_is (ifelse A B (or ~A C)) (ifelse A B 1)
+
+assert_is (ifelse ~(ifelse A ~B C) A ~A) ~(ifelse A ~B ~C)

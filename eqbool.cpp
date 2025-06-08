@@ -372,80 +372,94 @@ eqbool eqbool_context::ifelse_internal(eqbool i, eqbool t, eqbool e) {
     e = get_simplest(e);
 
     for(;;) {
-        eqbool s = simplify({~i}, t);
-        if(s == t)
-            break;
-        t = s;
-    }
-
-    for(;;) {
-        eqbool s = simplify({i}, e);
-        if(s == e)
-            break;
-        e = s;
-    }
-
-    if(i == t)
-        t = eqtrue;
-    else if(i == ~t)
-        t = eqfalse;
-
-    if(i == e)
-        e = eqfalse;
-    else if(i == ~e)
-        e = eqtrue;
-
-    if(i.is_const())
-        return i.is_true() ? t : e;
-
-    if(t == e)
-        return t;
-
-    if(t.is_const() && e.is_const()) {
-        assert(t != e);
-        return t.is_true() ? i : ~i;
-    }
-
-    if(t.is_const())
-        return t.is_false() ? (~i & e) : (i | e);
-
-    if(e.is_const())
-        return e.is_false() ? (i & t) : (~i | t);
-
-    if(t == ~e) {
-        if(t < i)
-            std::swap(i, t);
-
-        bool inv = false;
-        if(i.is_inversion()) {
-            i = ~i;
-            inv = !inv;
-        }
-        if(t.is_inversion()) {
-            t = ~t;
-            inv = !inv;
+        for(;;) {
+            eqbool s = simplify({~i}, t);
+            if(s == t)
+                break;
+            t = s;
         }
 
-        // We only consider the case when t contain i, because we
-        // know i was created before t (i < t).
-        const node_def &t_def = t.get_def();
-        if(t_def.kind == node_kind::eq) {
+        for(;;) {
+            eqbool s = simplify({i}, e);
+            if(s == e)
+                break;
+            e = s;
+        }
+
+        // TODO: Simplify should cover this?
+        if(i == t)
+            t = eqtrue;
+        else if(i == ~t)
+            t = eqfalse;
+
+        if(i == e)
+            e = eqfalse;
+        else if(i == ~e)
+            e = eqtrue;
+
+        if(i.is_const())
+            return i.is_true() ? t : e;
+
+        if(t == e)
+            return t;
+
+        if(t.is_const() && e.is_const()) {
+            assert(t != e);
+            return t.is_true() ? i : ~i;
+        }
+
+        if(t.is_const())
+            return t.is_false() ? (~i & e) : (i | e);
+
+        if(e.is_const())
+            return e.is_false() ? (i & t) : (~i | t);
+
+        if(t == ~e) {
+            if(t < i) {
+                std::tie(i, t, e) = std::make_tuple(t, i, ~i);
+                continue;
+            }
+
+            bool inv = false;
+            if(i.is_inversion()) {
+                i = ~i;
+                inv = !inv;
+            }
+            if(t.is_inversion()) {
+                t = ~t;
+                inv = !inv;
+            }
+
+            // We only consider the case when t contain i, because we
+            // know i was created before t (i < t).
+            const node_def &t_def = t.get_def();
+            if(t_def.kind == node_kind::eq) {
             if(t_def.args[0] == i)
-                return inv ? ~t_def.args[1] : t_def.args[1];
-            if(t_def.args[1] == i)
-                return inv ? ~t_def.args[0] : t_def.args[0];
+                    return inv ? ~t_def.args[1] : t_def.args[1];
+                if(t_def.args[1] == i)
+                    return inv ? ~t_def.args[0] : t_def.args[0];
+            }
+
+            node_def def(node_kind::eq, {i, t}, *this);
+            eqbool r = add_def(def);
+            return inv ? ~r : r;
         }
 
-        node_def def(node_kind::eq, {i, t}, *this);
-        eqbool r = add_def(def);
-        return inv ? ~r : r;
+        break;
     }
 
     if(i.is_inversion())
         std::tie(i, t, e) = std::make_tuple(~i, e, t);
 
+    bool inv = false;
+    if(t.is_inversion() && e.is_inversion()) {
+        std::tie(t, e) = std::make_tuple(~t, ~e);
+        inv = !inv;
+    }
+
     node_def def(node_kind::ifelse, {i, t, e}, *this);
-    return add_def(def);
+    eqbool r = add_def(def);
+    return inv ? ~r : r;
 }
 
 #if EQBOOL_RECREATE_NODES
