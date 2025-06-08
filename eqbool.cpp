@@ -2,7 +2,7 @@
 /*  Testing boolean expressions for equivalence.
     https://github.com/kosarev/eqbool
 
-    Copyright (C) 2023 Ivan Kosarev.
+    Copyright (C) 2023-2025 Ivan Kosarev.
     mail@ivankosarev.com
 
     Published under the MIT license.
@@ -10,7 +10,9 @@
 
 #include <algorithm>
 #include <ctime>
+#include <iostream>
 #include <ostream>
+#include <sstream>
 #include <unordered_set>
 
 #pragma GCC diagnostic push
@@ -147,7 +149,7 @@ eqbool eqbool_context::get(const char *term) {
     return add_def(node_def(term, *this));
 }
 
-eqbool eqbool_context::get_or(args_ref args, bool invert_args) {
+eqbool eqbool_context::get_or_internal(args_ref args, bool invert_args) {
     for(eqbool a : args)
         check(a);
 
@@ -215,6 +217,11 @@ eqbool eqbool_context::get_or(args_ref args, bool invert_args) {
 
     node_def def(node_kind::or_node, selected_args, *this);
     return add_def(def);
+}
+
+eqbool eqbool_context::get_or(args_ref args, bool invert_args) {
+    // TODO: Catch undersimplified results via node re-creation.
+    return get_or_internal(args, invert_args);
 }
 
 void eqbool_context::add_eq(std::vector<eqbool> &eqs, eqbool e) {
@@ -355,7 +362,7 @@ eqbool eqbool_context::simplify(args_ref args, const eqbool &e) const {
     return e;
 }
 
-eqbool eqbool_context::ifelse(eqbool i, eqbool t, eqbool e) {
+eqbool eqbool_context::ifelse_internal(eqbool i, eqbool t, eqbool e) {
     check(i);
     check(t);
     check(e);
@@ -439,6 +446,55 @@ eqbool eqbool_context::ifelse(eqbool i, eqbool t, eqbool e) {
 
     node_def def(node_kind::ifelse, {i, t, e}, *this);
     return add_def(def);
+}
+
+#if EQBOOL_RECREATE_NODES
+eqbool eqbool_context::recreate_node(eqbool n) {
+    if (n.is_inversion())
+        return ~recreate_node(~n);
+
+    const node_def &def = n.get_def();
+    switch(def.kind) {
+    case node_kind::none:
+        return n;
+    case node_kind::or_node:
+        return get_or_internal(def.args);
+    case node_kind::ifelse:
+        return ifelse_internal(def.args[0], def.args[1], def.args[2]);
+    case node_kind::eq:
+        return ifelse_internal(def.args[0], def.args[1], ~def.args[1]);
+    }
+    unreachable("unknown node kind");
+}
+#endif
+
+eqbool eqbool_context::ifelse(eqbool i, eqbool t, eqbool e) {
+    eqbool r = ifelse_internal(i, t, e);
+
+#if EQBOOL_RECREATE_NODES
+    // Make sure on re-creation of the result we get the same
+    // expression, so no simplifications that we already support are
+    // missed.
+    eqbool recreated = recreate_node(r);
+    if(recreated != r) {
+        std::ostringstream ss;
+        ss <<
+            "eqbool: error: missed simplification:\n" <<
+            "original:  (ifelse " << i << "\n"
+            "                   " << t << "\n"
+            "                   " << e << ")\n"
+            "returned:  " << r << "\n"
+            "recreated: " << recreated << "\n";
+
+        static std::size_t shortest = SIZE_MAX;
+        if(ss.str().size() < shortest) {
+            std::cerr << ss.str();
+            shortest = ss.str().size();
+        }
+    }
+#endif
+
+    return r;
 }
 
 static int get_literal(const node_def *def,

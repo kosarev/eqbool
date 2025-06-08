@@ -19,6 +19,10 @@
 #include <unordered_map>
 #include <vector>
 
+#ifndef EQBOOL_RECREATE_NODES
+#define EQBOOL_RECREATE_NODES 0
+#endif
+
 namespace eqbool {
 
 class args_ref;
@@ -245,6 +249,13 @@ private:
 
     // Attempts to simplify e given all args are all false.
     eqbool simplify(args_ref args, const eqbool &e) const;
+
+#if EQBOOL_RECREATE_NODES
+    eqbool recreate_node(eqbool n);
+#endif
+
+    eqbool get_or_internal(args_ref args, bool invert_args = false);
+    eqbool ifelse_internal(eqbool i, eqbool t, eqbool e);
 
     std::ostream &dump_helper(std::ostream &s, eqbool e, bool subexpr,
         const std::unordered_map<const node_def*, unsigned> &ids,
