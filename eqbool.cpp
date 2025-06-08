@@ -221,7 +221,13 @@ eqbool eqbool_context::get_or_internal(args_ref args, bool invert_args) {
 
 eqbool eqbool_context::get_or(args_ref args, bool invert_args) {
     // TODO: Catch undersimplified results via node re-creation.
-    return get_or_internal(args, invert_args);
+    eqbool r = get_or_internal(args, invert_args);
+
+#if EQBOOL_RECREATE_NODES
+    check_recreated(r, "or", args, invert_args);
+#endif
+
+    return r;
 }
 
 void eqbool_context::add_eq(std::vector<eqbool> &eqs, eqbool e) {
@@ -482,10 +488,9 @@ eqbool eqbool_context::recreate_node(eqbool n) {
 }
 #endif
 
-eqbool eqbool_context::ifelse(eqbool i, eqbool t, eqbool e) {
-    eqbool r = ifelse_internal(i, t, e);
-
 #if EQBOOL_RECREATE_NODES
+void eqbool_context::check_recreated(eqbool r, const char *op,
+                                     args_ref args, bool invert_args) {
     // Make sure on re-creation of the result we get the same
     // expression, so no simplifications that we already support are
     // missed.
@@ -494,9 +499,11 @@ eqbool eqbool_context::ifelse(eqbool i, eqbool t, eqbool e) {
         std::ostringstream ss;
         ss <<
             "eqbool: error: missed simplification:\n" <<
-            "original:  (ifelse " << i << "\n"
-            "                   " << t << "\n"
-            "                   " << e << ")\n"
+            "original:  (" << op << " [invert_args=" << invert_args << "]\n";
+        for(eqbool a : args)
+            ss << "                " << a << "\n";
+        ss <<
+            "                )\n" <<
             "returned:  " << r << "\n"
             "recreated: " << recreated << "\n";
 
@@ -506,6 +513,14 @@ eqbool eqbool_context::ifelse(eqbool i, eqbool t, eqbool e) {
             shortest = ss.str().size();
         }
     }
+}
+#endif
+
+eqbool eqbool_context::ifelse(eqbool i, eqbool t, eqbool e) {
+    eqbool r = ifelse_internal(i, t, e);
+
+#if EQBOOL_RECREATE_NODES
+    check_recreated(r, "ifelse", {i, t, e});
 #endif
 
     return r;

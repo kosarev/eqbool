@@ -252,6 +252,8 @@ private:
 
 #if EQBOOL_RECREATE_NODES
     eqbool recreate_node(eqbool n);
+    void check_recreated(eqbool r, const char *op, args_ref args,
+                         bool invert_args = false);
 #endif
 
     eqbool get_or_internal(args_ref args, bool invert_args = false);
