@@ -413,7 +413,7 @@ eqbool eqbool_context::ifelse_internal(eqbool i, eqbool t, eqbool e) {
             // know i was created before t (i < t).
             const node_def &t_def = t.get_def();
             if(t_def.kind == node_kind::eq) {
-            if(t_def.args[0] == i)
+                if(t_def.args[0] == i)
                     return inv ? ~t_def.args[1] : t_def.args[1];
                 if(t_def.args[1] == i)
                     return inv ? ~t_def.args[0] : t_def.args[0];
