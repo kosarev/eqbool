@@ -170,27 +170,29 @@ eqbool eqbool_context::get_or_internal(args_ref args, bool invert_args) {
             break;
     }
 
-    // TODO: We can reuse 'sorted_args'.
-    std::vector<eqbool> selected_args;
+    std::size_t num_args = 0;
     for(eqbool a : sorted_args) {
         if(a.is_true())
             return eqtrue;
         if(!a.is_false())
-            selected_args.push_back(a);
+            sorted_args[num_args++] = a;
     }
 
-    if(selected_args.empty())
+    sorted_args.resize(num_args);
+
+    if(num_args == 0)
         return eqfalse;
-    if(selected_args.size() == 1)
-        return selected_args[0];
+
+    if(num_args == 1)
+        return sorted_args[0];
 
     // (or (and A B) (and ~A C))  =>  (ifelse A B C)
     // (or ~(or ~A ~B) ~(or A ~C))  =>  (ifelse A B C)
-    if(selected_args.size() == 2 &&
-           selected_args[0].is_inversion() &&
-           selected_args[1].is_inversion()) {
-        const node_def &def0 = (~selected_args[0]).get_def();
-        const node_def &def1 = (~selected_args[1]).get_def();
+    if(num_args == 2 &&
+           sorted_args[0].is_inversion() &&
+           sorted_args[1].is_inversion()) {
+        const node_def &def0 = (~sorted_args[0]).get_def();
+        const node_def &def1 = (~sorted_args[1]).get_def();
         if(def0.kind == node_kind::or_node && def0.args.size() == 2 &&
                 def1.kind == node_kind::or_node && def1.args.size() == 2) {
             for(unsigned p = 0; p != 2; ++p) {
@@ -207,9 +209,9 @@ eqbool eqbool_context::get_or_internal(args_ref args, bool invert_args) {
     }
 
     // Order the arguments again to guarantee uniqueness.
-    std::sort(selected_args.begin(), selected_args.end());
+    std::sort(sorted_args.begin(), sorted_args.end());
 
-    node_def def(node_kind::or_node, selected_args, *this);
+    node_def def(node_kind::or_node, sorted_args, *this);
     return add_def(def);
 }
 
