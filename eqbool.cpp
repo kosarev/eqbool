@@ -381,33 +381,17 @@ eqbool eqbool_context::ifelse_internal(eqbool i, eqbool t, eqbool e) {
             e = s;
         }
 
-        // TODO: Simplify should cover this?
-        if(i == t)
-            t = eqtrue;
-        else if(i == ~t)
-            t = eqfalse;
-
-        if(i == e)
-            e = eqfalse;
-        else if(i == ~e)
-            e = eqtrue;
-
         if(i.is_const())
             return i.is_true() ? t : e;
-
-        if(t == e)
-            return t;
-
-        if(t.is_const() && e.is_const()) {
-            assert(t != e);
-            return t.is_true() ? i : ~i;
-        }
 
         if(t.is_const())
             return t.is_false() ? (~i & e) : (i | e);
 
         if(e.is_const())
             return e.is_false() ? (i & t) : (~i | t);
+
+        if(t == e)
+            return t;
 
         if(t == ~e) {
             if(t < i) {
