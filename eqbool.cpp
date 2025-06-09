@@ -122,6 +122,8 @@ eqbool eqbool_context::add_def(node_def def) {
 }
 
 eqbool eqbool_context::get_simplest(eqbool e) const {
+    check(e);
+
     bool inv = false;
     for(;;) {
         if(e.is_inversion()) {
@@ -146,9 +148,6 @@ eqbool eqbool_context::get(const char *term) {
 }
 
 eqbool eqbool_context::get_or_internal(args_ref args, bool invert_args) {
-    for(eqbool a : args)
-        check(a);
-
     // Order the arguments before simplifications so we never
     // depend on the order they are specified in.
     std::vector<eqbool> sorted_args(args.begin(), args.end());
@@ -365,10 +364,6 @@ eqbool eqbool_context::simplify(args_ref args, const eqbool &e) const {
 }
 
 eqbool eqbool_context::ifelse_internal(eqbool i, eqbool t, eqbool e) {
-    check(i);
-    check(t);
-    check(e);
-
     i = get_simplest(i);
     t = get_simplest(t);
     e = get_simplest(e);
