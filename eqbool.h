@@ -247,7 +247,7 @@ private:
 
     static bool contains_all(args_ref p, args_ref q);
 
-    // Attempts to simplify e given all args are all false.
+    // Attempts to simplify e given all other args are false.
     eqbool simplify(args_ref args, const eqbool &e) const;
 
 #if EQBOOL_RECREATE_NODES
