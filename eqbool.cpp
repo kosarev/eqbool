@@ -160,8 +160,8 @@ eqbool eqbool_context::get_or_internal(args_ref args, bool invert_args) {
         for(eqbool &a : sorted_args) {
             eqbool s = simplify(sorted_args, a);
             if(s != a) {
-                a = s;
-                if(!s.is_const())
+                a = get_simplest(s);
+                if(!a.is_const())
                     repeat = true;
             }
         }
