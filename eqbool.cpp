@@ -208,9 +208,6 @@ eqbool eqbool_context::get_or_internal(args_ref args, bool invert_args) {
         }
     }
 
-    // Order the arguments again to guarantee uniqueness.
-    std::sort(sorted_args.begin(), sorted_args.end());
-
     node_def def(node_kind::or_node, sorted_args, *this);
     return add_def(def);
 }
