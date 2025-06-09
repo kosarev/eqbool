@@ -707,6 +707,8 @@ std::ostream &eqbool_context::dump_helper(
 }
 
 std::ostream &eqbool_context::dump(std::ostream &s, eqbool e) const {
+    e = get_simplest(e);
+
     // Collect common subexpressions.
     std::unordered_set<const node_def*> seen;
     std::unordered_map<const node_def*, unsigned> ids;
