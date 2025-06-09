@@ -112,37 +112,33 @@ eqbool eqbool_context::add_def(node_def def) {
         return value;
     }
 
-    if(!value.is_inversion() && &value.get_def() == key)
-        return value;
-
     // The node definition refers to an equivalent but different
     // and simpler eqbool value. See if that simpler value does
     // itself have a simpler version and if so, propagate.
-    eqbool v = value;
-    bool inv = false;
-
-    for(;;) {
-        if(v.is_inversion()) {
-            v = ~v;
-            inv = !inv;
-        }
-
-        eqbool s = defs[v.get_def()];
-        if(s == v)
-            break;
-
-        v = s;
-    }
-
-    value = inv ? ~v : v;
+    if(value.is_inversion() || &value.get_def() != key)
+        value = get_simplest(value);
 
     return value;
 }
 
-eqbool eqbool_context::get_simplest(eqbool e) {
-    bool inv = e.is_inversion();
-    eqbool s = add_def((inv ? ~e : e).get_def());
-    return inv ? ~s : s;
+eqbool eqbool_context::get_simplest(eqbool e) const {
+    bool inv = false;
+    for(;;) {
+        if(e.is_inversion()) {
+            e = ~e;
+            inv = !inv;
+        }
+
+        auto i = defs.find(e.get_def());
+        assert(i != defs.end());
+        eqbool s = i->second;
+        if(s == e)
+            break;
+
+        e = s;
+    }
+
+    return inv ? ~e : e;
 }
 
 eqbool eqbool_context::get(const char *term) {
