@@ -409,7 +409,7 @@ eqbool eqbool_context::ifelse_internal(eqbool i, eqbool t, eqbool e) {
                 inv = !inv;
             }
 
-            // We only consider the case when t contain i, because we
+            // We only consider the case when t contains i, because we
             // know i was created before t (i < t).
             const node_def &t_def = t.get_def();
             if(t_def.kind == node_kind::eq) {
