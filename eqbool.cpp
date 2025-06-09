@@ -371,14 +371,14 @@ eqbool eqbool_context::ifelse_internal(eqbool i, eqbool t, eqbool e) {
             eqbool s = simplify({~i}, t);
             if(s == t)
                 break;
-            t = s;
+            t = get_simplest(s);
         }
 
         for(;;) {
             eqbool s = simplify({i}, e);
             if(s == e)
                 break;
-            e = s;
+            e = get_simplest(s);
         }
 
         if(i.is_const())
