@@ -148,13 +148,12 @@ eqbool eqbool_context::get(const char *term) {
 }
 
 eqbool eqbool_context::get_or_internal(args_ref args, bool invert_args) {
-    // Order the arguments before simplifications so we never
-    // depend on the order they are specified in.
+    // Order the arguments so we never depend on the order they are
+    // specified in.
     std::vector<eqbool> sorted_args(args.begin(), args.end());
-    std::sort(sorted_args.begin(), sorted_args.end());
-
     for(eqbool &a : sorted_args)
         a = get_simplest(invert_args ? ~a : a);
+    std::sort(sorted_args.begin(), sorted_args.end());
 
     for(;;) {
         bool repeat = false;
