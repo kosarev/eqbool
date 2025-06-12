@@ -228,6 +228,8 @@ void eqbool_context::add_eq(std::vector<eqbool> &eqs, eqbool e) {
         eqs.push_back(e);
 }
 
+// TODO: Rename to get_false_nodes?
+// TODO: Generalise to find both false and true nodes?
 eqbool eqbool_context::get_eqs(args_ref args, const eqbool &excluded,
                                std::vector<eqbool> &eqs) const {
    for(const eqbool &a : args) {
@@ -310,6 +312,8 @@ eqbool eqbool_context::simplify(args_ref args, const eqbool &e) const {
     if(is_known_false(args, excluded, ~e))
         return eqtrue;
 
+    // TODO: Can we get find all false / true nodes here first rather
+    // than to collect them multiple times?
     bool inv = e.is_inversion();
     const node_def &def = (inv ? ~e : e).get_def();
     if(def.kind == node_kind::eq) {
