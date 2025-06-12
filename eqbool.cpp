@@ -657,7 +657,7 @@ bool eqbool_context::is_equiv(eqbool a, eqbool b) {
     return equiv;
 }
 
-std::ostream &eqbool_context::dump_helper(
+std::ostream &eqbool_context::print_helper(
         std::ostream &s, eqbool e, bool subexpr,
         const std::unordered_map<const node_def*, unsigned> &ids,
         std::vector<eqbool> &worklist) const {
@@ -670,7 +670,7 @@ std::ostream &eqbool_context::dump_helper(
             e = ~e;
         } else {
             s << "~";
-            dump_helper(s, ~e, /* subexpr= */ true, ids, worklist);
+            print_helper(s, ~e, /* subexpr= */ true, ids, worklist);
             return s;
         }
     }
@@ -701,7 +701,7 @@ std::ostream &eqbool_context::dump_helper(
             s << " ";
             if(is_and)
                 a = ~a;
-            dump_helper(s, a, /* subexpr= */ true, ids, worklist);
+            print_helper(s, a, /* subexpr= */ true, ids, worklist);
         }
         if(subexpr)
             s << ")";
@@ -710,7 +710,7 @@ std::ostream &eqbool_context::dump_helper(
     unreachable("unknown node kind");
 }
 
-std::ostream &eqbool_context::dump(std::ostream &s, eqbool e) const {
+std::ostream &eqbool_context::print(std::ostream &s, eqbool e) const {
     e = get_simplest(e);
 
     // Collect common subexpressions.
@@ -746,7 +746,7 @@ std::ostream &eqbool_context::dump(std::ostream &s, eqbool e) const {
         unreachable("unknown node kind");
     }
 
-    dump_helper(s, e, /* subexpr= */ false, ids, worklist);
+    print_helper(s, e, /* subexpr= */ false, ids, worklist);
 
     seen.clear();
     while(!worklist.empty()) {
@@ -759,7 +759,7 @@ std::ostream &eqbool_context::dump(std::ostream &s, eqbool e) const {
             continue;
 
         s << "; t" << ids[def] << " = ";
-        dump_helper(s, n, /* subexpr= */ false, ids, worklist);
+        print_helper(s, n, /* subexpr= */ false, ids, worklist);
     }
 
     return s;

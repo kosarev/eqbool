@@ -179,7 +179,7 @@ public:
     eqbool operator | (eqbool other) const;
     eqbool operator & (eqbool other) const;
 
-    std::ostream &dump(std::ostream &s) const;
+    std::ostream &print(std::ostream &s) const;
 };
 
 class args_ref {
@@ -259,7 +259,7 @@ private:
     eqbool get_or_internal(args_ref args, bool invert_args = false);
     eqbool ifelse_internal(eqbool i, eqbool t, eqbool e);
 
-    std::ostream &dump_helper(std::ostream &s, eqbool e, bool subexpr,
+    std::ostream &print_helper(std::ostream &s, eqbool e, bool subexpr,
         const std::unordered_map<const node_def*, unsigned> &ids,
         std::vector<eqbool> &worklist) const;
 
@@ -299,7 +299,7 @@ public:
     bool is_unsat(eqbool e);
     bool is_equiv(eqbool a, eqbool b);
 
-    std::ostream &dump(std::ostream &s, eqbool e) const;
+    std::ostream &print(std::ostream &s, eqbool e) const;
 };
 
 inline detail::node_def::node_def(node_kind kind, args_ref args,
@@ -327,12 +327,12 @@ inline eqbool eqbool::operator & (eqbool other) const {
     return get_context().get_and(*this, other);
 }
 
-inline std::ostream &eqbool::dump(std::ostream &s) const {
-    return get_context().dump(s, *this);
+inline std::ostream &eqbool::print(std::ostream &s) const {
+    return get_context().print(s, *this);
 }
 
 inline std::ostream &operator << (std::ostream &s, eqbool e) {
-    return e.dump(s);
+    return e.print(s);
 }
 
 }  // namespace eqbool
