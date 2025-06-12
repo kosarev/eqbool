@@ -256,6 +256,8 @@ eqbool eqbool_context::get_eqs(args_ref args, const eqbool &excluded,
             if (eqbool r = get_eqs(def.args, excluded, eqs))
                 return r;
         }
+
+        // TODO: Consider IFELSE nodes as well.
     }
 
     return {};
