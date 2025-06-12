@@ -263,6 +263,10 @@ private:
         const std::unordered_map<const node_def*, unsigned> &ids,
         std::vector<eqbool> &worklist) const;
 
+    // Dumps nodes in order of creation. Helps reproduce and debug
+    // simplifications.
+    std::ostream &dump(std::ostream &s, args_ref nodes) const;
+
 public:
     eqbool_context() = default;
 

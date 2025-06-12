@@ -476,15 +476,21 @@ void eqbool_context::check_recreated(eqbool r, const char *op,
     eqbool recreated = recreate_node(r);
     if(recreated != r) {
         std::ostringstream ss;
-        ss <<
-            "eqbool: error: missed simplification:\n" <<
-            "original:  (" << op << " [invert_args=" << invert_args << "]\n";
+        ss << "eqbool: error: missed simplification:\n";
+
+        std::vector<eqbool> nodes;
         for(eqbool a : args)
-            ss << "                " << a << "\n";
-        ss <<
-            "                )\n" <<
-            "returned:  " << r << "\n"
-            "recreated: " << recreated << "\n";
+            nodes.push_back(invert_args ? ~a : a);
+        nodes.insert(nodes.end(), {r, recreated});
+        dump(ss, nodes);
+
+        ss << "original: (" << op;
+        for(eqbool a : args)
+            ss << " t" << (invert_args ? ~a : a).get_id();
+        ss << ")\n";
+
+        ss << "returned: t" << r.get_id() << "\n";
+        ss << "recreated: t" << recreated.get_id() << "\n";
 
         static std::size_t shortest = SIZE_MAX;
         if(ss.str().size() < shortest) {
@@ -762,6 +768,59 @@ std::ostream &eqbool_context::print(std::ostream &s, eqbool e) const {
 
         s << "; t" << ids[def] << " = ";
         print_helper(s, n, /* subexpr= */ false, ids, worklist);
+    }
+
+    return s;
+}
+
+std::ostream &eqbool_context::dump(std::ostream &s, args_ref nodes) const {
+    std::vector<eqbool> temps;
+    std::vector<eqbool> worklist(nodes.begin(), nodes.end());
+    while(!worklist.empty()) {
+        eqbool n = worklist.back();
+        worklist.pop_back();
+
+        if(contains(temps, n))
+            continue;
+
+        temps.push_back(n);
+
+        if(n.is_inversion()) {
+            worklist.push_back(~n);
+            continue;
+        }
+
+        for(eqbool a : n.get_def().args)
+            worklist.push_back(a);
+    }
+
+    std::sort(temps.begin(), temps.end(),
+              [](eqbool a, eqbool b) { return a.get_id() < b.get_id(); });
+
+    for(eqbool n : temps) {
+        s << "def t" << n.get_id();
+        if(n.is_inversion()) {
+            s << " ~t" << (~n).get_id() << "\n";
+            continue;
+        }
+        const node_def &def = n.get_def();
+        switch(def.kind) {
+        case node_kind::none:
+            s << "\n";
+            continue;
+        case node_kind::or_node:
+        case node_kind::ifelse:
+        case node_kind::eq:
+            s << " (";
+            s << (def.kind == node_kind::or_node ? "or" :
+                  def.kind == node_kind::ifelse ? "ifelse" :
+                  "eq");
+            for(eqbool a : def.args)
+                s << " t" << a.get_id();
+            s << ")\n";
+            continue;
+        }
+        unreachable("unknown node kind");
     }
 
     return s;
