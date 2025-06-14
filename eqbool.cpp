@@ -10,9 +10,7 @@
 
 #include <algorithm>
 #include <ctime>
-#include <iostream>
 #include <ostream>
-#include <sstream>
 #include <unordered_set>
 
 #pragma GCC diagnostic push
@@ -147,9 +145,9 @@ eqbool eqbool_context::get(const char *term) {
     return add_def(node_def(term, *this));
 }
 
-eqbool eqbool_context::get_or_internal(args_ref args, bool invert_args) {
-    // Order the arguments so we never depend on the order they are
-    // specified in.
+eqbool eqbool_context::get_or(args_ref args, bool invert_args) {
+    // Order the arguments before simplifications so we never
+    // depend on the order they are specified in.
     std::vector<eqbool> sorted_args(args.begin(), args.end());
     for(eqbool &a : sorted_args)
         a = get_simplest(invert_args ? ~a : a);
@@ -210,17 +208,6 @@ eqbool eqbool_context::get_or_internal(args_ref args, bool invert_args) {
 
     node_def def(node_kind::or_node, sorted_args, *this);
     return add_def(def);
-}
-
-eqbool eqbool_context::get_or(args_ref args, bool invert_args) {
-    // TODO: Catch undersimplified results via node re-creation.
-    eqbool r = get_or_internal(args, invert_args);
-
-#if EQBOOL_RECREATE_NODES
-    check_recreated(r, "or", args, invert_args);
-#endif
-
-    return r;
 }
 
 void eqbool_context::add_eq(std::vector<eqbool> &eqs, eqbool e) {
@@ -367,7 +354,7 @@ eqbool eqbool_context::simplify(args_ref args, const eqbool &e) const {
     return e;
 }
 
-eqbool eqbool_context::ifelse_internal(eqbool i, eqbool t, eqbool e) {
+eqbool eqbool_context::ifelse(eqbool i, eqbool t, eqbool e) {
     i = get_simplest(i);
     t = get_simplest(t);
     e = get_simplest(e);
@@ -445,70 +432,6 @@ eqbool eqbool_context::ifelse_internal(eqbool i, eqbool t, eqbool e) {
     node_def def(node_kind::ifelse, {i, t, e}, *this);
     eqbool r = add_def(def);
     return inv ? ~r : r;
-}
-
-#if EQBOOL_RECREATE_NODES
-eqbool eqbool_context::recreate_node(eqbool n) {
-    if (n.is_inversion())
-        return ~recreate_node(~n);
-
-    const node_def &def = n.get_def();
-    switch(def.kind) {
-    case node_kind::none:
-        return n;
-    case node_kind::or_node:
-        return get_or_internal(def.args);
-    case node_kind::ifelse:
-        return ifelse_internal(def.args[0], def.args[1], def.args[2]);
-    case node_kind::eq:
-        return ifelse_internal(def.args[0], def.args[1], ~def.args[1]);
-    }
-    unreachable("unknown node kind");
-}
-#endif
-
-#if EQBOOL_RECREATE_NODES
-void eqbool_context::check_recreated(eqbool r, const char *op,
-                                     args_ref args, bool invert_args) {
-    // Make sure on re-creation of the result we get the same
-    // expression, so no simplifications that we already support are
-    // missed.
-    eqbool recreated = recreate_node(r);
-    if(recreated != r) {
-        std::ostringstream ss;
-        ss << "eqbool: error: missed simplification:\n";
-
-        std::vector<eqbool> nodes;
-        for(eqbool a : args)
-            nodes.push_back(invert_args ? ~a : a);
-        nodes.insert(nodes.end(), {r, recreated});
-        dump(ss, nodes);
-
-        ss << "original: (" << op;
-        for(eqbool a : args)
-            ss << " t" << (invert_args ? ~a : a).get_id();
-        ss << ")\n";
-
-        ss << "returned: t" << r.get_id() << "\n";
-        ss << "recreated: t" << recreated.get_id() << "\n";
-
-        static std::size_t shortest = SIZE_MAX;
-        if(ss.str().size() < shortest) {
-            std::cerr << ss.str();
-            shortest = ss.str().size();
-        }
-    }
-}
-#endif
-
-eqbool eqbool_context::ifelse(eqbool i, eqbool t, eqbool e) {
-    eqbool r = ifelse_internal(i, t, e);
-
-#if EQBOOL_RECREATE_NODES
-    check_recreated(r, "ifelse", {i, t, e});
-#endif
-
-    return r;
 }
 
 static int get_literal(const node_def *def,
