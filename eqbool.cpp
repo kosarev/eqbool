@@ -58,18 +58,18 @@ std::size_t detail::hasher::operator () (const node_def &def) const {
     hash(h, def.term);
 
     if(def.kind == node_kind::eq) {
-        hash(h, def.args[0].def_code);
-        hash(h, def.args[1].def_code);
+        hash(h, def.args[0].entry_code);
+        hash(h, def.args[1].entry_code);
     } else if(def.kind == node_kind::ifelse) {
-        hash(h, def.args[0].def_code);
-        hash(h, def.args[1].def_code);
-        hash(h, def.args[2].def_code);
+        hash(h, def.args[0].entry_code);
+        hash(h, def.args[1].entry_code);
+        hash(h, def.args[2].entry_code);
     } else if(def.kind == node_kind::or_node) {
         std::vector<eqbool> args;
         flatten_args(args, def.args);
         std::sort(args.begin(), args.end());
         for(eqbool a : args)
-            hash(h, a.def_code);
+            hash(h, a.entry_code);
     } else {
         assert(def.args.size() == 0);
     }
@@ -106,7 +106,7 @@ eqbool eqbool_context::add_def(node_def def) {
     eqbool &value = i->second;
     bool inserted = r.second;
     if(inserted) {
-        value = eqbool(*key);
+        value = eqbool(*i);
         return value;
     }
 
@@ -129,9 +129,7 @@ eqbool eqbool_context::get_simplest(eqbool e) const {
             inv = !inv;
         }
 
-        auto i = defs.find(e.get_def());
-        assert(i != defs.end());
-        eqbool s = i->second;
+        eqbool s = e.get_entry().second;
         if(s == e)
             break;
 

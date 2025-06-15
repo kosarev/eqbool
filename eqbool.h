@@ -106,32 +106,38 @@ struct node_def {
 class eqbool {
 private:
     using node_def = detail::node_def;
+    using node_entry = std::pair<const node_def, eqbool>;
 
     // TODO: Should default to reinterpret_cast<uintptr_t>(nullptr)?
-    uintptr_t def_code = 0;
+    uintptr_t entry_code = 0;
 
-    eqbool(uintptr_t def_code)
-        : def_code(def_code) {}
+    eqbool(uintptr_t entry_code)
+        : entry_code(entry_code) {}
 
-    eqbool(const node_def &def)
-            : eqbool(reinterpret_cast<uintptr_t>(&def)) {
+    eqbool(node_entry &entry)
+            : eqbool(reinterpret_cast<uintptr_t>(&entry)) {
         assert(!is_inversion());
+    }
+
+    const node_entry &get_entry() const {
+        assert(!is_inversion());
+        assert(entry_code);
+        return *reinterpret_cast<node_entry*>(entry_code);
     }
 
     const node_def &get_def() const {
-        assert(!is_inversion());
-        assert(def_code);
-        return *reinterpret_cast<node_def*>(def_code);
+        // TODO: Can we advance to the simplest form right away?
+        return get_entry().first;
     }
 
     bool is_inversion() const {
-        return def_code & detail::inversion_flag;
+        return entry_code & detail::inversion_flag;
     }
 
     eqbool_context &get_context() const {
-        uintptr_t def = def_code & ~detail::inversion_flag;
-        assert(def);
-        return reinterpret_cast<node_def*>(def)->get_context();
+        uintptr_t entry = entry_code & ~detail::inversion_flag;
+        assert(entry);
+        return reinterpret_cast<node_entry*>(entry)->first.get_context();
     }
 
     // Defines the canonical order. Nodes created earlier are
@@ -139,9 +145,10 @@ private:
     // inversions always come immediately after their
     // non-inverted versions.
     std::size_t get_id() const {
-        uintptr_t def = def_code & ~detail::inversion_flag;
-        assert(def);
-        return reinterpret_cast<node_def*>(def)->id * 2 + is_inversion();
+        uintptr_t entry = entry_code & ~detail::inversion_flag;
+        assert(entry);
+        return reinterpret_cast<node_entry*>(entry)->first.id * 2 +
+               is_inversion();
     }
 
     friend class eqbool_context;
@@ -150,7 +157,7 @@ private:
 public:
     eqbool() = default;
 
-    bool is_void() const { return def_code == 0; }
+    bool is_void() const { return entry_code == 0; }
     operator bool() const { return !is_void(); }
 
     bool is_false() const;
@@ -159,7 +166,7 @@ public:
 
     bool operator == (const eqbool &other) const {
         assert(&get_context() == &other.get_context());
-        return def_code == other.def_code;
+        return entry_code == other.entry_code;
     }
 
     bool operator != (const eqbool &other) const {
@@ -282,7 +289,7 @@ public:
 
     eqbool invert(eqbool e) {
         check(e);
-        return eqbool(e.def_code ^ detail::inversion_flag);
+        return eqbool(e.entry_code ^ detail::inversion_flag);
     }
 
     const eqbool_stats &get_stats() const { return stats; }
