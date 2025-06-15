@@ -178,7 +178,11 @@ public:
         return get_id() < other.get_id();
     }
 
-    eqbool operator ~ () const;
+    eqbool operator ~ () const {
+        assert(!is_void());
+        return eqbool(entry_code ^ detail::inversion_flag);
+    }
+
     eqbool operator | (eqbool other) const;
     eqbool operator & (eqbool other) const;
 
@@ -284,11 +288,6 @@ public:
         return ifelse(a, b, ~b);
     }
 
-    eqbool invert(eqbool e) {
-        check(e);
-        return eqbool(e.entry_code ^ detail::inversion_flag);
-    }
-
     const eqbool_stats &get_stats() const { return stats; }
 
     bool is_unsat(eqbool e);
@@ -301,10 +300,6 @@ inline detail::node_def::node_def(node_kind kind, args_ref args,
                                   eqbool_context &context)
     : context(&context), kind(kind), args(args.begin(), args.end())
 {}
-
-inline eqbool eqbool::operator ~ () const {
-    return get_context().invert(*this);
-}
 
 inline eqbool eqbool::operator | (eqbool other) const {
     return get_context().get_or(*this, other);
