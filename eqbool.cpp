@@ -558,7 +558,7 @@ bool eqbool_context::is_equiv(eqbool a, eqbool b) {
             b = ~b;
         }
 
-        defs[a.get_def()] = b;
+        a.get_entry().second = b;
     }
 
     return equiv;

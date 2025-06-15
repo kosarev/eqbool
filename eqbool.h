@@ -129,7 +129,7 @@ private:
             propagate_impl();
     }
 
-    const node_entry &get_entry() const {
+    node_entry &get_entry() const {
         propagate();
         assert(!is_inversion());
         return *reinterpret_cast<node_entry*>(entry_code);
