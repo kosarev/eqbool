@@ -119,20 +119,14 @@ private:
         assert(!(entry_code & detail::inversion_flag));
     }
 
+    void propagate_impl() const;
+
     void propagate() const {
         assert(!is_void());
-        uintptr_t inv = 0;
-        uintptr_t code = entry_code;
-        for(;;) {
-            inv ^= code;
-            code &= ~detail::inversion_flag;
-            auto &entry = *reinterpret_cast<node_entry*>(code);
-            eqbool s = entry.second;
-            if(s.entry_code == code)
-                break;
-            code = s.entry_code;
-        }
-        entry_code = code | (inv & detail::inversion_flag);
+        uintptr_t code = entry_code & ~detail::inversion_flag;
+        auto &entry = *reinterpret_cast<node_entry*>(code);
+        if(entry.second.entry_code != code)
+            propagate_impl();
     }
 
     const node_entry &get_entry() const {

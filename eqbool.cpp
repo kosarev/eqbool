@@ -98,6 +98,21 @@ inline bool detail::matcher::operator () (const node_def &a,
     return a_args == b_args;
 }
 
+void eqbool::propagate_impl() const {
+    uintptr_t inv = 0;
+    uintptr_t code = entry_code;
+    for(;;) {
+        inv ^= code;
+        code &= ~detail::inversion_flag;
+        auto &entry = *reinterpret_cast<node_entry*>(code);
+        eqbool s = entry.second;
+        if(s.entry_code == code)
+            break;
+        code = s.entry_code;
+    }
+    entry_code = code | (inv & detail::inversion_flag);
+}
+
 eqbool eqbool_context::add_def(node_def def) {
     def.id = defs.size();
     auto r = defs.insert({def, eqbool()});
