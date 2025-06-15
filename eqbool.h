@@ -109,7 +109,7 @@ private:
     using node_entry = std::pair<const node_def, eqbool>;
 
     // TODO: Should default to reinterpret_cast<uintptr_t>(nullptr)?
-    uintptr_t entry_code = 0;
+    mutable uintptr_t entry_code = 0;
 
     eqbool(uintptr_t entry_code)
         : entry_code(entry_code) {}
@@ -119,24 +119,40 @@ private:
         assert(!is_inversion());
     }
 
+    void propagate() const {
+        assert(!is_void());
+        uintptr_t inv = 0;
+        uintptr_t code = entry_code;
+        for(;;) {
+            inv ^= code;
+            code &= ~detail::inversion_flag;
+            auto &entry = *reinterpret_cast<node_entry*>(code);
+            eqbool s = entry.second;
+            if(!s.entry_code || s.entry_code == code)
+                break;
+            code = s.entry_code;
+        }
+        entry_code = code | (inv & detail::inversion_flag);
+    }
+
     const node_entry &get_entry() const {
+        propagate();
         assert(!is_inversion());
-        assert(entry_code);
         return *reinterpret_cast<node_entry*>(entry_code);
     }
 
     const node_def &get_def() const {
-        // TODO: Can we advance to the simplest form right away?
         return get_entry().first;
     }
 
     bool is_inversion() const {
+        propagate();
         return entry_code & detail::inversion_flag;
     }
 
     eqbool_context &get_context() const {
+        assert(!is_void());
         uintptr_t entry = entry_code & ~detail::inversion_flag;
-        assert(entry);
         return reinterpret_cast<node_entry*>(entry)->first.get_context();
     }
 
@@ -145,8 +161,8 @@ private:
     // inversions always come immediately after their
     // non-inverted versions.
     std::size_t get_id() const {
+        propagate();
         uintptr_t entry = entry_code & ~detail::inversion_flag;
-        assert(entry);
         return reinterpret_cast<node_entry*>(entry)->first.id * 2 +
                is_inversion();
     }
@@ -166,6 +182,8 @@ public:
 
     bool operator == (const eqbool &other) const {
         assert(&get_context() == &other.get_context());
+        propagate();
+        other.propagate();
         return entry_code == other.entry_code;
     }
 
@@ -179,7 +197,7 @@ public:
     }
 
     eqbool operator ~ () const {
-        assert(!is_void());
+        propagate();
         return eqbool(entry_code ^ detail::inversion_flag);
     }
 
@@ -236,8 +254,6 @@ private:
         unused(&e);
         assert(&e.get_context() == this);
     }
-
-    eqbool get_simplest(eqbool e) const;
 
     int skip_not(eqbool &e,
                  std::unordered_map<const node_def*, int> &literals);

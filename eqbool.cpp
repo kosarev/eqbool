@@ -102,41 +102,11 @@ eqbool eqbool_context::add_def(node_def def) {
     def.id = defs.size();
     auto r = defs.insert({def, eqbool()});
     auto &i = r.first;
-    const node_def *key = &i->first;
     eqbool &value = i->second;
     bool inserted = r.second;
-    if(inserted) {
+    if(inserted)
         value = eqbool(*i);
-        return value;
-    }
-
-    // The node definition refers to an equivalent but different
-    // and simpler eqbool value. See if that simpler value does
-    // itself have a simpler version and if so, propagate.
-    if(value.is_inversion() || &value.get_def() != key)
-        value = get_simplest(value);
-
     return value;
-}
-
-eqbool eqbool_context::get_simplest(eqbool e) const {
-    check(e);
-
-    bool inv = false;
-    for(;;) {
-        if(e.is_inversion()) {
-            e = ~e;
-            inv = !inv;
-        }
-
-        eqbool s = e.get_entry().second;
-        if(s == e)
-            break;
-
-        e = s;
-    }
-
-    return inv ? ~e : e;
 }
 
 eqbool eqbool_context::get(const char *term) {
@@ -147,8 +117,10 @@ eqbool eqbool_context::get_or(args_ref args, bool invert_args) {
     // Order the arguments before simplifications so we never
     // depend on the order they are specified in.
     std::vector<eqbool> sorted_args(args.begin(), args.end());
-    for(eqbool &a : sorted_args)
-        a = get_simplest(invert_args ? ~a : a);
+    for(eqbool &a : sorted_args) {
+        check(a);
+        a = invert_args ? ~a : a;
+    }
     std::sort(sorted_args.begin(), sorted_args.end());
 
     for(;;) {
@@ -156,7 +128,7 @@ eqbool eqbool_context::get_or(args_ref args, bool invert_args) {
         for(eqbool &a : sorted_args) {
             eqbool s = simplify(sorted_args, a);
             if(s != a) {
-                a = get_simplest(s);
+                a = s;
                 if(!a.is_const())
                     repeat = true;
             }
@@ -353,23 +325,23 @@ eqbool eqbool_context::simplify(args_ref args, const eqbool &e) const {
 }
 
 eqbool eqbool_context::ifelse(eqbool i, eqbool t, eqbool e) {
-    i = get_simplest(i);
-    t = get_simplest(t);
-    e = get_simplest(e);
+    check(i);
+    check(t);
+    check(e);
 
     for(;;) {
         for(;;) {
             eqbool s = simplify({~i}, t);
             if(s == t)
                 break;
-            t = get_simplest(s);
+            t = s;
         }
 
         for(;;) {
             eqbool s = simplify({i}, e);
             if(s == e)
                 break;
-            e = get_simplest(s);
+            e = s;
         }
 
         if(i.is_const())
@@ -562,9 +534,6 @@ bool eqbool_context::is_unsat(eqbool e) {
 }
 
 bool eqbool_context::is_equiv(eqbool a, eqbool b) {
-    a = get_simplest(a);
-    b = get_simplest(b);
-
     eqbool eq = get_eq(a, b);
     if(eq.is_const())
         return eq.is_true();
@@ -640,7 +609,7 @@ std::ostream &eqbool_context::print_helper(
 }
 
 std::ostream &eqbool_context::print(std::ostream &s, eqbool e) const {
-    e = get_simplest(e);
+    check(e);
 
     // Collect common subexpressions.
     std::unordered_set<const node_def*> seen;
