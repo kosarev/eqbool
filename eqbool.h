@@ -160,9 +160,9 @@ public:
     bool is_void() const { return entry_code == 0; }
     operator bool() const { return !is_void(); }
 
-    bool is_false() const;
-    bool is_true() const;
-    bool is_const() const { return is_false() || is_true(); }
+    bool is_false() const { return get_id() == 0; }
+    bool is_true() const { return get_id() == 1; }
+    bool is_const() const { return get_id() < 2; }
 
     bool operator == (const eqbool &other) const {
         assert(&get_context() == &other.get_context());
@@ -264,9 +264,6 @@ private:
 public:
     eqbool_context() = default;
 
-    bool is_false(eqbool e) const { check(e); return e == eqfalse; }
-    bool is_true(eqbool e) const { check(e); return e == eqtrue; }
-
     eqbool get_false() /* no const */ { return eqfalse; }
     eqbool get_true() /* no const */ { return eqtrue; }
     eqbool get(bool b) { return b ? get_true() : get_false(); }
@@ -304,14 +301,6 @@ inline detail::node_def::node_def(node_kind kind, args_ref args,
                                   eqbool_context &context)
     : context(&context), kind(kind), args(args.begin(), args.end())
 {}
-
-inline bool eqbool::is_false() const {
-    return get_context().is_false(*this);
-}
-
-inline bool eqbool::is_true() const {
-    return get_context().is_true(*this);
-}
 
 inline eqbool eqbool::operator ~ () const {
     return get_context().invert(*this);
