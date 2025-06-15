@@ -556,6 +556,7 @@ bool eqbool_context::is_equiv(eqbool a, eqbool b) {
     bool equiv = is_unsat(~eq);
 
     if(equiv) {
+        // Assume that the node created earlier is the simpler one.
         if(a < b)
             std::swap(a, b);
 
