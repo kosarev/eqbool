@@ -116,7 +116,7 @@ private:
 
     eqbool(node_entry &entry)
             : eqbool(reinterpret_cast<uintptr_t>(&entry)) {
-        assert(!is_inversion());
+        assert(!(entry_code & detail::inversion_flag));
     }
 
     void propagate() const {
@@ -128,7 +128,7 @@ private:
             code &= ~detail::inversion_flag;
             auto &entry = *reinterpret_cast<node_entry*>(code);
             eqbool s = entry.second;
-            if(!s.entry_code || s.entry_code == code)
+            if(s.entry_code == code)
                 break;
             code = s.entry_code;
         }
