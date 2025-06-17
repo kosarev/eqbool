@@ -83,7 +83,7 @@ inline bool detail::matcher::operator () (const node_def &a,
     if(a.kind != b.kind || a.term != b.term)
         return false;
 
-    if(a.kind == node_kind::none)
+    if(a.kind == node_kind::term)
         return true;
 
     if(a.kind == node_kind::ifelse || a.kind == node_kind::eq)
@@ -289,7 +289,7 @@ eqbool eqbool_context::simplify(args_ref args, const eqbool &e) const {
     bool inv = e.is_inversion();
     const node_def &def = (inv ? ~e : e).get_def();
     switch(def.kind) {
-    case node_kind::none:
+    case node_kind::term:
         return e;
     case node_kind::eq:
         if(eqbool v = evaluate(args, excluded, def.args[0]))
@@ -467,7 +467,7 @@ bool eqbool_context::is_unsat(eqbool e) {
         assert(r_lit != 0);
 
         switch(def.kind) {
-        case node_kind::none:
+        case node_kind::term:
             if(n.is_const()) {
                 assert(n.is_false());
                 solver->add(-r_lit);
@@ -592,7 +592,7 @@ std::ostream &eqbool_context::print_helper(
 
     const node_def &def = e.get_def();
     switch(def.kind) {
-    case node_kind::none:
+    case node_kind::term:
         return s << def.term;
     case node_kind::or_node:
     case node_kind::ifelse:
@@ -641,7 +641,7 @@ std::ostream &eqbool_context::print(std::ostream &s, eqbool e) const {
 
         const node_def *def = &n.get_def();
         switch(def->kind) {
-        case node_kind::none:
+        case node_kind::term:
             continue;
         case node_kind::or_node:
         case node_kind::ifelse:
@@ -712,7 +712,7 @@ std::ostream &eqbool_context::dump(std::ostream &s, args_ref nodes) const {
         }
         const node_def &def = n.get_def();
         switch(def.kind) {
-        case node_kind::none:
+        case node_kind::term:
             s << "\n";
             continue;
         case node_kind::or_node:

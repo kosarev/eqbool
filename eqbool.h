@@ -61,7 +61,7 @@ public:
 
 namespace detail {
 
-enum class node_kind { none, or_node, ifelse, eq };
+enum class node_kind { term, or_node, ifelse, eq };
 
 constexpr uintptr_t inversion_flag = 1;
 
@@ -86,7 +86,7 @@ struct matcher {
 struct node_def {
     eqbool_context *context = nullptr;
     std::size_t id = 0;
-    node_kind kind = node_kind::none;
+    node_kind kind = node_kind::term;
     std::string term;
     std::vector<eqbool> args;
 
