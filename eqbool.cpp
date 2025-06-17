@@ -200,8 +200,6 @@ void eqbool_context::add_eq(std::vector<eqbool> &eqs, eqbool e) {
         eqs.push_back(e);
 }
 
-// TODO: Rename to get_false_nodes?
-// TODO: Generalise to find both false and true nodes?
 eqbool eqbool_context::evaluate(args_ref args, const eqbool &excluded,
                                 std::vector<eqbool> &eqs) const {
    for(const eqbool &a : args) {
