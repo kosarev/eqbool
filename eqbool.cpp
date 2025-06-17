@@ -141,7 +141,7 @@ eqbool eqbool_context::get_or(args_ref args, bool invert_args) {
     for(;;) {
         bool repeat = false;
         for(eqbool &a : sorted_args) {
-            eqbool s = simplify(sorted_args, a);
+            eqbool s = reduce(sorted_args, a);
             if(s != a) {
                 a = s;
                 if(!a.is_const())
@@ -276,7 +276,7 @@ bool eqbool_context::contains_all(args_ref p, args_ref q) {
     return true;
 }
 
-eqbool eqbool_context::simplify(args_ref args, const eqbool &e) const {
+eqbool eqbool_context::reduce(args_ref args, const eqbool &e) const {
     if(e.is_const())
         return e;
 
@@ -354,14 +354,14 @@ eqbool eqbool_context::ifelse(eqbool i, eqbool t, eqbool e) {
 
     for(;;) {
         for(;;) {
-            eqbool s = simplify({~i}, t);
+            eqbool s = reduce({~i}, t);
             if(s == t)
                 break;
             t = s;
         }
 
         for(;;) {
-            eqbool s = simplify({i}, e);
+            eqbool s = reduce({i}, e);
             if(s == e)
                 break;
             e = s;

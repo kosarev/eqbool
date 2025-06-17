@@ -266,8 +266,9 @@ private:
 
     static bool contains_all(args_ref p, args_ref q);
 
-    // Attempts to simplify e given all other args are false.
-    eqbool simplify(args_ref args, const eqbool &e) const;
+    // Attempts to reduce e to one of its direct or indirect operands or
+    // a constant, assuming all args that are not e are false.
+    eqbool reduce(args_ref args, const eqbool &e) const;
 
     std::ostream &print_helper(std::ostream &s, eqbool e, bool subexpr,
         const std::unordered_map<const node_def*, unsigned> &ids,
