@@ -294,12 +294,20 @@ eqbool eqbool_context::simplify(args_ref args, const eqbool &e) const {
         if(eqbool v = evaluate(args, excluded, def.args[1]))
             return inv ^ v.is_true() ? def.args[0] : ~def.args[0];
         return e;
-    case node_kind::ifelse:
+    case node_kind::ifelse: {
         if(eqbool v = evaluate(args, excluded, def.args[0])) {
             eqbool op = def.args[v.is_true() ? 1 : 2];
             return inv ? ~op : op;
         }
+        eqbool iv = evaluate(args, excluded, def.args[1]);
+        eqbool ev = evaluate(args, excluded, def.args[2]);
+        if(iv && ev) {
+            if(iv == ev)
+                return inv ? ~iv : iv;
+            return inv ^ ev.is_true() ? ~def.args[0] : def.args[0];
+        }
         return e;
+    }
     case node_kind::or_node:
         eqbool s = eqfalse;
         std::vector<eqbool> eq_args;
