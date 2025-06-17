@@ -252,6 +252,8 @@ private:
     int skip_not(eqbool &e,
                  std::unordered_map<const node_def*, int> &literals);
 
+    eqbool find_value(std::vector<eqbool> &eqs, eqbool e) const;
+
     static void add_eq(std::vector<eqbool> &eqs, eqbool e);
 
     eqbool evaluate(args_ref args, const eqbool &excluded,

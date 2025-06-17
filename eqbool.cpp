@@ -195,6 +195,14 @@ eqbool eqbool_context::get_or(args_ref args, bool invert_args) {
     return add_def(def);
 }
 
+eqbool eqbool_context::find_value(std::vector<eqbool> &eqs, eqbool e) const {
+    if(contains(eqs, e))
+        return eqfalse;
+    if(contains(eqs, ~e))
+        return eqtrue;
+    return {};
+}
+
 void eqbool_context::add_eq(std::vector<eqbool> &eqs, eqbool e) {
     if(!contains(eqs, e))
         eqs.push_back(e);
@@ -206,22 +214,16 @@ eqbool eqbool_context::evaluate(args_ref args, const eqbool &excluded,
         if(&a == &excluded)
             continue;
 
-        if(contains(eqs, a))
-            return eqfalse;
-        if(contains(eqs, ~a))
-            return eqtrue;
+        if(eqbool v = find_value(eqs, a))
+            return v;
 
         bool inv = a.is_inversion();
         const node_def &def = (inv ? ~a : a).get_def();
         if(def.kind == node_kind::eq) {
-            if(contains(eqs, def.args[0]))
-                add_eq(eqs, inv ? def.args[1] : ~def.args[1]);
-            if(contains(eqs, ~def.args[0]))
-                add_eq(eqs, inv ? ~def.args[1] : def.args[1]);
-            if(contains(eqs, def.args[1]))
-                add_eq(eqs, inv ? def.args[0] : ~def.args[0]);
-            if(contains(eqs, ~def.args[1]))
-                add_eq(eqs, inv ? ~def.args[0] : def.args[0]);
+            if(eqbool v = find_value(eqs, def.args[0]))
+                add_eq(eqs, inv ^ v.is_true() ? def.args[1] : ~def.args[1]);
+            if(eqbool v = find_value(eqs, def.args[1]))
+                add_eq(eqs, inv ^ v.is_true() ? def.args[0] : ~def.args[0]);
         } else if(!inv && def.kind == node_kind::or_node) {
             if (eqbool r = evaluate(def.args, excluded, eqs))
                 return r;
