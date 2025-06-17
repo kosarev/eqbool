@@ -260,7 +260,7 @@ private:
     eqbool get_eqs(args_ref args, const eqbool &excluded,
                    eqbool e, std::vector<eqbool> &eqs) const;
 
-    bool is_known_false(args_ref args, const eqbool &excluded, eqbool e) const;
+    eqbool evaluate(args_ref args, const eqbool &excluded, eqbool e) const;
 
     static bool contains_all(args_ref p, args_ref q);
 

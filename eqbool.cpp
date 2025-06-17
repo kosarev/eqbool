@@ -250,13 +250,10 @@ eqbool eqbool_context::get_eqs(args_ref args, const eqbool &excluded,
     return {};
 }
 
-bool eqbool_context::is_known_false(args_ref args, const eqbool &excluded,
-                                    eqbool e) const {
+eqbool eqbool_context::evaluate(args_ref args, const eqbool &excluded,
+                                eqbool e) const {
     std::vector<eqbool> eqs;
-    if(eqbool r = get_eqs(args, excluded, e, eqs))
-        return r.is_false();
-
-    return false;
+    return get_eqs(args, excluded, e, eqs);
 }
 
 bool eqbool_context::contains_all(args_ref p, args_ref q) {
@@ -281,29 +278,23 @@ eqbool eqbool_context::simplify(args_ref args, const eqbool &e) const {
         return e;
 
     const eqbool &excluded = e;
-    if(is_known_false(args, excluded, e))
-        return eqfalse;
-    if(is_known_false(args, excluded, ~e))
-        return eqtrue;
+    if(eqbool v = evaluate(args, excluded, e))
+        return v;
 
     // TODO: Can we get find all false / true nodes here first rather
     // than to collect them multiple times?
     bool inv = e.is_inversion();
     const node_def &def = (inv ? ~e : e).get_def();
     if(def.kind == node_kind::eq) {
-        if(is_known_false(args, excluded, def.args[0]))
-            return inv ? def.args[1] : ~def.args[1];
-        if(is_known_false(args, excluded, ~def.args[0]))
-            return inv ? ~def.args[1] : def.args[1];
-        if(is_known_false(args, excluded, def.args[1]))
-            return inv ? def.args[0] : ~def.args[0];
-        if(is_known_false(args, excluded, ~def.args[1]))
-            return inv ? ~def.args[0] : def.args[0];
+        if(eqbool v = evaluate(args, excluded, def.args[0]))
+            return inv ^ v.is_true() ? def.args[1] : ~def.args[1];
+        if(eqbool v = evaluate(args, excluded, def.args[1]))
+            return inv ^ v.is_true() ? def.args[0] : ~def.args[0];
     } else if(def.kind == node_kind::ifelse) {
-        if(is_known_false(args, excluded, ~def.args[0]))
-            return inv ? ~def.args[1] : def.args[1];
-        if(is_known_false(args, excluded, def.args[0]))
-            return inv ? ~def.args[2] : def.args[2];
+        if(eqbool v = evaluate(args, excluded, def.args[0])) {
+            eqbool op = def.args[v.is_true() ? 1 : 2];
+            return inv ? ~op : op;
+        }
     } else if(def.kind == node_kind::or_node) {
         eqbool s = eqfalse;
         std::vector<eqbool> eq_args;
