@@ -224,12 +224,15 @@ eqbool eqbool_context::evaluate(args_ref args, const eqbool &excluded,
                 add_eq(eqs, inv ^ v.is_true() ? def.args[1] : ~def.args[1]);
             if(eqbool v = find_value(eqs, def.args[1]))
                 add_eq(eqs, inv ^ v.is_true() ? def.args[0] : ~def.args[0]);
+        } else if(!inv && def.kind == node_kind::ifelse) {
+            if(eqbool v = find_value(eqs, def.args[0])) {
+                eqbool op = def.args[v.is_true() ? 1 : 2];
+                add_eq(eqs, op);
+            }
         } else if(!inv && def.kind == node_kind::or_node) {
             if (eqbool r = evaluate(def.args, excluded, eqs))
                 return r;
         }
-
-        // TODO: Consider IFELSE nodes as well.
     }
 
     return {};
