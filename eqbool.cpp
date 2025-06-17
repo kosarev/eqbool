@@ -285,17 +285,22 @@ eqbool eqbool_context::simplify(args_ref args, const eqbool &e) const {
     // than to collect them multiple times?
     bool inv = e.is_inversion();
     const node_def &def = (inv ? ~e : e).get_def();
-    if(def.kind == node_kind::eq) {
+    switch(def.kind) {
+    case node_kind::none:
+        return e;
+    case node_kind::eq:
         if(eqbool v = evaluate(args, excluded, def.args[0]))
             return inv ^ v.is_true() ? def.args[1] : ~def.args[1];
         if(eqbool v = evaluate(args, excluded, def.args[1]))
             return inv ^ v.is_true() ? def.args[0] : ~def.args[0];
-    } else if(def.kind == node_kind::ifelse) {
+        return e;
+    case node_kind::ifelse:
         if(eqbool v = evaluate(args, excluded, def.args[0])) {
             eqbool op = def.args[v.is_true() ? 1 : 2];
             return inv ? ~op : op;
         }
-    } else if(def.kind == node_kind::or_node) {
+        return e;
+    case node_kind::or_node:
         eqbool s = eqfalse;
         std::vector<eqbool> eq_args;
         for(const eqbool &a : def.args) {
@@ -326,8 +331,9 @@ eqbool eqbool_context::simplify(args_ref args, const eqbool &e) const {
             if(contains_all(def.args, a_def.args))
                 return inv ? eqfalse : eqtrue;
         }
+        return e;
     }
-    return e;
+    unreachable("unknown node kind");
 }
 
 eqbool eqbool_context::ifelse(eqbool i, eqbool t, eqbool e) {
