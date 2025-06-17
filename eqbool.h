@@ -254,11 +254,11 @@ private:
 
     static void add_eq(std::vector<eqbool> &eqs, eqbool e);
 
-    eqbool get_eqs(args_ref args, const eqbool &excluded,
-                   std::vector<eqbool> &eqs) const;
+    eqbool evaluate(args_ref args, const eqbool &excluded,
+                    std::vector<eqbool> &eqs) const;
 
-    eqbool get_eqs(args_ref args, const eqbool &excluded,
-                   eqbool e, std::vector<eqbool> &eqs) const;
+    eqbool evaluate(args_ref args, const eqbool &excluded,
+                    eqbool e, std::vector<eqbool> &eqs) const;
 
     eqbool evaluate(args_ref args, const eqbool &excluded, eqbool e) const;
 

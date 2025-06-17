@@ -202,8 +202,8 @@ void eqbool_context::add_eq(std::vector<eqbool> &eqs, eqbool e) {
 
 // TODO: Rename to get_false_nodes?
 // TODO: Generalise to find both false and true nodes?
-eqbool eqbool_context::get_eqs(args_ref args, const eqbool &excluded,
-                               std::vector<eqbool> &eqs) const {
+eqbool eqbool_context::evaluate(args_ref args, const eqbool &excluded,
+                                std::vector<eqbool> &eqs) const {
    for(const eqbool &a : args) {
         if(&a == &excluded)
             continue;
@@ -225,7 +225,7 @@ eqbool eqbool_context::get_eqs(args_ref args, const eqbool &excluded,
             if(contains(eqs, ~def.args[1]))
                 add_eq(eqs, inv ? ~def.args[0] : def.args[0]);
         } else if(!inv && def.kind == node_kind::or_node) {
-            if (eqbool r = get_eqs(def.args, excluded, eqs))
+            if (eqbool r = evaluate(def.args, excluded, eqs))
                 return r;
         }
 
@@ -235,12 +235,12 @@ eqbool eqbool_context::get_eqs(args_ref args, const eqbool &excluded,
     return {};
 }
 
-eqbool eqbool_context::get_eqs(args_ref args, const eqbool &excluded,
-                               eqbool e, std::vector<eqbool> &eqs) const {
+eqbool eqbool_context::evaluate(args_ref args, const eqbool &excluded,
+                                eqbool e, std::vector<eqbool> &eqs) const {
     eqs = {e};
     for(;;) {
         std::size_t num_eqs = eqs.size();
-        if(eqbool r = get_eqs(args, excluded, eqs))
+        if(eqbool r = evaluate(args, excluded, eqs))
             return r;
 
         if(eqs.size() == num_eqs)
@@ -253,7 +253,7 @@ eqbool eqbool_context::get_eqs(args_ref args, const eqbool &excluded,
 eqbool eqbool_context::evaluate(args_ref args, const eqbool &excluded,
                                 eqbool e) const {
     std::vector<eqbool> eqs;
-    return get_eqs(args, excluded, e, eqs);
+    return evaluate(args, excluded, e, eqs);
 }
 
 bool eqbool_context::contains_all(args_ref p, args_ref q) {
@@ -313,7 +313,7 @@ eqbool eqbool_context::simplify(args_ref args, const eqbool &e) const {
         std::vector<eqbool> eq_args;
         for(const eqbool &a : def.args) {
             std::vector<eqbool> eqs;
-            if(eqbool r = get_eqs(args, excluded, a, eqs)) {
+            if(eqbool r = evaluate(args, excluded, a, eqs)) {
                 if(r.is_true())
                     return inv ? eqfalse : eqtrue;
                 continue;
