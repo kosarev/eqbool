@@ -367,6 +367,7 @@ eqbool eqbool_context::ifelse(eqbool i, eqbool t, eqbool e) {
     check(t);
     check(e);
 
+    i = reduce({}, i);
     t = reduce({~i}, t);
     e = reduce({i}, e);
 
