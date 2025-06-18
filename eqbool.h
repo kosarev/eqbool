@@ -64,6 +64,8 @@ namespace detail {
 enum class node_kind { term, or_node, ifelse, eq };
 
 constexpr uintptr_t inversion_flag = 1;
+constexpr uintptr_t lock_flag = 2;
+constexpr uintptr_t entry_code_mask = ~(inversion_flag | lock_flag);
 
 struct node_def;
 
@@ -121,18 +123,33 @@ private:
 
     void propagate_impl() const;
 
+    void reduce() const;
+
     void propagate() const {
         assert(!is_void());
-        uintptr_t code = entry_code & ~detail::inversion_flag;
-        auto &entry = *reinterpret_cast<node_entry*>(code);
-        if(entry.second.entry_code != code)
+        if(entry_code & detail::lock_flag)
+            return;
+
+        uintptr_t code = entry_code & detail::entry_code_mask;
+        if(reinterpret_cast<node_entry*>(code)->second.entry_code != code)
             propagate_impl();
+
+        for(eqbool a : reinterpret_cast<node_entry*>(
+                entry_code & detail::entry_code_mask)->first.args) {
+            uintptr_t a_code = a.entry_code & detail::entry_code_mask;
+            auto &a_entry = *reinterpret_cast<node_entry*>(a_code);
+            if(a_entry.second.entry_code != a_code || a_entry.first.id < 2) {
+                reduce();
+                break;
+            }
+        }
     }
 
     node_entry &get_entry() const {
         propagate();
         assert(!is_inversion());
-        return *reinterpret_cast<node_entry*>(entry_code);
+        uintptr_t entry = entry_code & detail::entry_code_mask;
+        return *reinterpret_cast<node_entry*>(entry);
     }
 
     const node_def &get_def() const {
@@ -146,7 +163,7 @@ private:
 
     eqbool_context &get_context() const {
         assert(!is_void());
-        uintptr_t entry = entry_code & ~detail::inversion_flag;
+        uintptr_t entry = entry_code & detail::entry_code_mask;
         return reinterpret_cast<node_entry*>(entry)->first.get_context();
     }
 
@@ -156,7 +173,7 @@ private:
     // non-inverted versions.
     std::size_t get_id() const {
         propagate();
-        uintptr_t entry = entry_code & ~detail::inversion_flag;
+        uintptr_t entry = entry_code & detail::entry_code_mask;
         return reinterpret_cast<node_entry*>(entry)->first.id * 2 +
                is_inversion();
     }
@@ -281,6 +298,8 @@ private:
     // Dumps nodes in order of creation. Helps reproduce and debug
     // simplifications.
     std::ostream &dump(std::ostream &s, args_ref nodes) const;
+
+    friend eqbool;
 
 public:
     eqbool_context() = default;

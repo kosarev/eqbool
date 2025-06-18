@@ -103,7 +103,7 @@ void eqbool::propagate_impl() const {
     uintptr_t code = entry_code;
     for(;;) {
         inv ^= code;
-        code &= ~detail::inversion_flag;
+        code &= detail::entry_code_mask;
         auto &entry = *reinterpret_cast<node_entry*>(code);
         eqbool s = entry.second;
         if(s.entry_code == code)
@@ -111,6 +111,12 @@ void eqbool::propagate_impl() const {
         code = s.entry_code;
     }
     entry_code = code | (inv & detail::inversion_flag);
+}
+
+void eqbool::reduce() const {
+    entry_code |= detail::lock_flag;
+    entry_code = get_context().reduce({}, *this).entry_code;
+    entry_code &= ~detail::lock_flag;
 }
 
 eqbool eqbool_context::add_def(node_def def) {
