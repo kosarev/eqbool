@@ -251,6 +251,11 @@ eqbool eqbool_context::evaluate(args_ref assumed_falses,
             break;
     }
 
+    if(contains(eqs, eqfalse))
+        return eqfalse;
+    if(contains(eqs, eqtrue))
+        return eqtrue;
+
     return {};
 }
 
