@@ -198,6 +198,8 @@ public:
     eqbool operator | (eqbool other) const;
     eqbool operator & (eqbool other) const;
 
+    eqbool operator ^ (bool inv) const { return inv ? ~*this : *this; }
+
     std::ostream &print(std::ostream &s) const;
 };
 
@@ -282,9 +284,9 @@ private:
 public:
     eqbool_context() = default;
 
-    eqbool get_false() /* no const */ { return eqfalse; }
-    eqbool get_true() /* no const */ { return eqtrue; }
-    eqbool get(bool b) { return b ? get_true() : get_false(); }
+    eqbool get_false() const { return eqfalse; }
+    eqbool get_true() const { return eqtrue; }
+    eqbool get(bool b) const { return b ? get_true() : get_false(); }
     eqbool get(const char *term);
 
     eqbool get_or(args_ref args, bool invert_args = false);

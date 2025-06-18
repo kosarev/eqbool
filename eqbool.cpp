@@ -134,7 +134,7 @@ eqbool eqbool_context::get_or(args_ref args, bool invert_args) {
     std::vector<eqbool> sorted_args(args.begin(), args.end());
     for(eqbool &a : sorted_args) {
         check(a);
-        a = invert_args ? ~a : a;
+        a = a ^ invert_args;
     }
     std::sort(sorted_args.begin(), sorted_args.end());
 
@@ -218,17 +218,15 @@ eqbool eqbool_context::evaluate(args_ref args, const eqbool &excluded,
             return v;
 
         bool inv = a.is_inversion();
-        const node_def &def = (inv ? ~a : a).get_def();
+        const node_def &def = (a ^ inv).get_def();
         if(def.kind == node_kind::eq) {
             if(eqbool v = find_value(eqs, def.args[0]))
-                add_eq(eqs, inv ^ v.is_true() ? def.args[1] : ~def.args[1]);
+                add_eq(eqs, def.args[1] ^ (inv ^ v.is_false()));
             if(eqbool v = find_value(eqs, def.args[1]))
-                add_eq(eqs, inv ^ v.is_true() ? def.args[0] : ~def.args[0]);
+                add_eq(eqs, def.args[0] ^ (inv ^ v.is_false()));
         } else if(!inv && def.kind == node_kind::ifelse) {
-            if(eqbool v = find_value(eqs, def.args[0])) {
-                eqbool op = def.args[v.is_true() ? 1 : 2];
-                add_eq(eqs, op);
-            }
+            if(eqbool v = find_value(eqs, def.args[0]))
+                add_eq(eqs, def.args[v.is_true() ? 1 : 2]);
         } else if(!inv && def.kind == node_kind::or_node) {
             if (eqbool r = evaluate(def.args, excluded, eqs))
                 return r;
@@ -287,27 +285,25 @@ eqbool eqbool_context::reduce_impl(args_ref args, const eqbool &e) const {
     // TODO: Can we get find all false / true nodes here first rather
     // than to collect them multiple times?
     bool inv = e.is_inversion();
-    const node_def &def = (inv ? ~e : e).get_def();
+    const node_def &def = (e ^ inv).get_def();
     switch(def.kind) {
     case node_kind::term:
         return e;
     case node_kind::eq:
         if(eqbool v = evaluate(args, excluded, def.args[0]))
-            return inv ^ v.is_true() ? def.args[1] : ~def.args[1];
+            return def.args[1] ^ (inv ^ v.is_false());
         if(eqbool v = evaluate(args, excluded, def.args[1]))
-            return inv ^ v.is_true() ? def.args[0] : ~def.args[0];
+            return def.args[0] ^ (inv ^ v.is_false());
         return e;
     case node_kind::ifelse: {
-        if(eqbool v = evaluate(args, excluded, def.args[0])) {
-            eqbool op = def.args[v.is_true() ? 1 : 2];
-            return inv ? ~op : op;
-        }
+        if(eqbool v = evaluate(args, excluded, def.args[0]))
+            return def.args[v.is_true() ? 1 : 2] ^ inv;
         eqbool iv = evaluate(args, excluded, def.args[1]);
         eqbool ev = evaluate(args, excluded, def.args[2]);
         if(iv && ev) {
             if(iv == ev)
-                return inv ? ~iv : iv;
-            return inv ^ ev.is_true() ? ~def.args[0] : def.args[0];
+                return iv ^ inv;
+            return  def.args[0] ^ (inv ^ ev.is_true());
         }
         return e;
     }
@@ -318,18 +314,18 @@ eqbool eqbool_context::reduce_impl(args_ref args, const eqbool &e) const {
             std::vector<eqbool> eqs;
             if(eqbool r = evaluate(args, excluded, a, eqs)) {
                 if(r.is_true())
-                    return inv ? eqfalse : eqtrue;
+                    return get(!inv);
                 continue;
             }
             if(contains(eq_args, ~a))
-                return inv ? eqfalse : eqtrue;
+                return get(!inv);
             if(!s || contains(eq_args, a))
                 continue;
             eq_args.insert(eq_args.end(), eqs.begin(), eqs.end());
             s = s.is_false() ? a : eqbool();
         }
         if(s)
-            return inv ? ~s : s;
+            return s ^ inv;
         // (or (and A...) (and A... B...) C...) => (or (and A...) C...)
         for(const eqbool &a : args) {
             if(&a == &excluded)
@@ -340,7 +336,7 @@ eqbool eqbool_context::reduce_impl(args_ref args, const eqbool &e) const {
             if(a_def.kind != node_kind::or_node)
                 continue;
             if(contains_all(def.args, a_def.args))
-                return inv ? eqfalse : eqtrue;
+                return get(!inv);
         }
         return e;
     }
@@ -392,15 +388,13 @@ eqbool eqbool_context::ifelse(eqbool i, eqbool t, eqbool e) {
     if(t == ~e) {
         assert(!i.is_inversion());
         bool inv = t.is_inversion();
-        node_def def(node_kind::eq, {i, inv ? ~t : t}, *this);
-        eqbool r = add_def(def);
-        return inv ? ~r : r;
+        node_def def(node_kind::eq, {i, t ^ inv}, *this);
+        return add_def(def) ^ inv;
     }
 
     bool inv = t.is_inversion() && e.is_inversion();
-    node_def def(node_kind::ifelse, {i, inv ? ~t : t, inv ? ~e : e}, *this);
-    eqbool r = add_def(def);
-    return inv ? ~r : r;
+    node_def def(node_kind::ifelse, {i, t ^ inv, e ^ inv}, *this);
+    return add_def(def) ^ inv;
 }
 
 static int get_literal(const node_def *def,
