@@ -160,4 +160,7 @@ add_library(eqbool ${EQBOOL_SRCS} ${CADICAL_SRCS})
 add_executable(tester tester.cpp)
 target_link_libraries(tester eqbool)
 
+add_executable(example example.cpp)
+target_link_libraries(example eqbool)
+
 add_subdirectory(tests)
