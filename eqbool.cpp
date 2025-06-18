@@ -226,9 +226,6 @@ eqbool eqbool_context::evaluate(args_ref assumed_falses,
                 add_eq(eqs, def.args[1] ^ (inv ^ v.is_false()));
             if(eqbool v = get_value(eqs, def.args[1]))
                 add_eq(eqs, def.args[0] ^ (inv ^ v.is_false()));
-        } else if(!inv && def.kind == node_kind::ifelse) {
-            if(eqbool v = get_value(eqs, def.args[0]))
-                add_eq(eqs, def.args[v.is_true() ? 1 : 2]);
         } else if(!inv && def.kind == node_kind::or_node) {
             if (eqbool r = evaluate(def.args, excluded, eqs))
                 return r;
