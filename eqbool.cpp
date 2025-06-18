@@ -141,7 +141,7 @@ eqbool eqbool_context::get_or(args_ref args, bool invert_args) {
     for(;;) {
         bool repeat = false;
         for(eqbool &a : sorted_args) {
-            eqbool s = reduce(sorted_args, a);
+            eqbool s = reduce_impl(sorted_args, a);
             if(s != a) {
                 a = s;
                 if(!a.is_const())
@@ -276,7 +276,7 @@ bool eqbool_context::contains_all(args_ref p, args_ref q) {
     return true;
 }
 
-eqbool eqbool_context::reduce(args_ref args, const eqbool &e) const {
+eqbool eqbool_context::reduce_impl(args_ref args, const eqbool &e) const {
     if(e.is_const())
         return e;
 
@@ -347,45 +347,44 @@ eqbool eqbool_context::reduce(args_ref args, const eqbool &e) const {
     unreachable("unknown node kind");
 }
 
+eqbool eqbool_context::reduce(args_ref args, eqbool e) const {
+    for(;;) {
+        eqbool r = reduce_impl(args, e);
+        if(r == e)
+            break;
+        e = r;
+    }
+    return e;
+}
+
 eqbool eqbool_context::ifelse(eqbool i, eqbool t, eqbool e) {
     check(i);
     check(t);
     check(e);
 
-    for(;;) {
-        for(;;) {
-            eqbool s = reduce({~i}, t);
-            if(s == t)
-                break;
-            t = s;
-        }
+    t = reduce({~i}, t);
+    e = reduce({i}, e);
 
-        for(;;) {
-            eqbool s = reduce({i}, e);
-            if(s == e)
-                break;
-            e = s;
-        }
-
-        if(i.is_const())
-            return i.is_true() ? t : e;
-
-        if(t.is_const())
-            return t.is_false() ? (~i & e) : (i | e);
-
-        if(e.is_const())
-            return e.is_false() ? (i & t) : (~i | t);
-
-        if(t == e)
-            return t;
-
-        if(t == ~e && t < i) {
-            std::tie(i, t, e) = std::make_tuple(t, i, ~i);
-            continue;
-        }
-
-        break;
+    if(t == ~e) {
+        std::tie(i, t, e) = std::make_tuple(t, i, ~i);
+        t = reduce({~i}, t);
+        e = reduce({i}, e);
     }
+
+    if(i.is_const())
+        return i.is_true() ? t : e;
+
+    if(t.is_const())
+        return t.is_false() ? (~i & e) : (i | e);
+
+    if(e.is_const())
+        return e.is_false() ? (i & t) : (~i | t);
+
+    if(t == e)
+        return t;
+
+    if(t == ~e && t < i)
+        std::tie(i, t, e) = std::make_tuple(t, i, ~i);
 
     if(i.is_inversion())
         std::tie(i, t, e) = std::make_tuple(~i, e, t);

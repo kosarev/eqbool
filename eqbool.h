@@ -268,7 +268,8 @@ private:
 
     // Attempts to reduce e to one of its direct or indirect operands or
     // a constant, assuming all args that are not e are false.
-    eqbool reduce(args_ref args, const eqbool &e) const;
+    eqbool reduce_impl(args_ref args, const eqbool &e) const;
+    eqbool reduce(args_ref args, eqbool e) const;
 
     std::ostream &print_helper(std::ostream &s, eqbool e, bool subexpr,
         const std::unordered_map<const node_def*, unsigned> &ids,
