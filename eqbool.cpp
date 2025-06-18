@@ -195,10 +195,11 @@ eqbool eqbool_context::get_or(args_ref args, bool invert_args) {
     return add_def(def);
 }
 
-eqbool eqbool_context::find_value(std::vector<eqbool> &eqs, eqbool e) const {
-    if(contains(eqs, e))
+eqbool eqbool_context::get_value(std::vector<eqbool> &eqs,
+                                 eqbool assumed_false) const {
+    if(contains(eqs, assumed_false))
         return eqfalse;
-    if(contains(eqs, ~e))
+    if(contains(eqs, ~assumed_false))
         return eqtrue;
     return {};
 }
@@ -208,24 +209,25 @@ void eqbool_context::add_eq(std::vector<eqbool> &eqs, eqbool e) {
         eqs.push_back(e);
 }
 
-eqbool eqbool_context::evaluate(args_ref args, const eqbool &excluded,
+eqbool eqbool_context::evaluate(args_ref assumed_falses,
+                                const eqbool &excluded,
                                 std::vector<eqbool> &eqs) const {
-   for(const eqbool &a : args) {
+   for(const eqbool &a : assumed_falses) {
         if(&a == &excluded)
             continue;
 
-        if(eqbool v = find_value(eqs, a))
+        if(eqbool v = get_value(eqs, a))
             return v;
 
         bool inv = a.is_inversion();
         const node_def &def = (a ^ inv).get_def();
         if(def.kind == node_kind::eq) {
-            if(eqbool v = find_value(eqs, def.args[0]))
+            if(eqbool v = get_value(eqs, def.args[0]))
                 add_eq(eqs, def.args[1] ^ (inv ^ v.is_false()));
-            if(eqbool v = find_value(eqs, def.args[1]))
+            if(eqbool v = get_value(eqs, def.args[1]))
                 add_eq(eqs, def.args[0] ^ (inv ^ v.is_false()));
         } else if(!inv && def.kind == node_kind::ifelse) {
-            if(eqbool v = find_value(eqs, def.args[0]))
+            if(eqbool v = get_value(eqs, def.args[0]))
                 add_eq(eqs, def.args[v.is_true() ? 1 : 2]);
         } else if(!inv && def.kind == node_kind::or_node) {
             if (eqbool r = evaluate(def.args, excluded, eqs))
@@ -236,12 +238,13 @@ eqbool eqbool_context::evaluate(args_ref args, const eqbool &excluded,
     return {};
 }
 
-eqbool eqbool_context::evaluate(args_ref args, const eqbool &excluded,
+eqbool eqbool_context::evaluate(args_ref assumed_falses,
+                                const eqbool &excluded,
                                 eqbool e, std::vector<eqbool> &eqs) const {
     eqs = {e};
     for(;;) {
         std::size_t num_eqs = eqs.size();
-        if(eqbool r = evaluate(args, excluded, eqs))
+        if(eqbool r = evaluate(assumed_falses, excluded, eqs))
             return r;
 
         if(eqs.size() == num_eqs)
@@ -251,10 +254,10 @@ eqbool eqbool_context::evaluate(args_ref args, const eqbool &excluded,
     return {};
 }
 
-eqbool eqbool_context::evaluate(args_ref args, const eqbool &excluded,
-                                eqbool e) const {
+eqbool eqbool_context::evaluate(args_ref assumed_falses,
+                                const eqbool &excluded, eqbool e) const {
     std::vector<eqbool> eqs;
-    return evaluate(args, excluded, e, eqs);
+    return evaluate(assumed_falses, excluded, e, eqs);
 }
 
 bool eqbool_context::contains_all(args_ref p, args_ref q) {
@@ -274,12 +277,13 @@ bool eqbool_context::contains_all(args_ref p, args_ref q) {
     return true;
 }
 
-eqbool eqbool_context::reduce_impl(args_ref args, const eqbool &e) const {
+eqbool eqbool_context::reduce_impl(args_ref assumed_falses,
+                                   const eqbool &e) const {
     if(e.is_const())
         return e;
 
     const eqbool &excluded = e;
-    if(eqbool v = evaluate(args, excluded, e))
+    if(eqbool v = evaluate(assumed_falses, excluded, e))
         return v;
 
     // TODO: Can we get find all false / true nodes here first rather
@@ -290,16 +294,16 @@ eqbool eqbool_context::reduce_impl(args_ref args, const eqbool &e) const {
     case node_kind::term:
         return e;
     case node_kind::eq:
-        if(eqbool v = evaluate(args, excluded, def.args[0]))
+        if(eqbool v = evaluate(assumed_falses, excluded, def.args[0]))
             return def.args[1] ^ (inv ^ v.is_false());
-        if(eqbool v = evaluate(args, excluded, def.args[1]))
+        if(eqbool v = evaluate(assumed_falses, excluded, def.args[1]))
             return def.args[0] ^ (inv ^ v.is_false());
         return e;
     case node_kind::ifelse: {
-        if(eqbool v = evaluate(args, excluded, def.args[0]))
+        if(eqbool v = evaluate(assumed_falses, excluded, def.args[0]))
             return def.args[v.is_true() ? 1 : 2] ^ inv;
-        eqbool iv = evaluate(args, excluded, def.args[1]);
-        eqbool ev = evaluate(args, excluded, def.args[2]);
+        eqbool iv = evaluate(assumed_falses, excluded, def.args[1]);
+        eqbool ev = evaluate(assumed_falses, excluded, def.args[2]);
         if(iv && ev) {
             if(iv == ev)
                 return iv ^ inv;
@@ -312,7 +316,7 @@ eqbool eqbool_context::reduce_impl(args_ref args, const eqbool &e) const {
         std::vector<eqbool> eq_args;
         for(const eqbool &a : def.args) {
             std::vector<eqbool> eqs;
-            if(eqbool r = evaluate(args, excluded, a, eqs)) {
+            if(eqbool r = evaluate(assumed_falses, excluded, a, eqs)) {
                 if(r.is_true())
                     return get(!inv);
                 continue;
@@ -327,7 +331,7 @@ eqbool eqbool_context::reduce_impl(args_ref args, const eqbool &e) const {
         if(s)
             return s ^ inv;
         // (or (and A...) (and A... B...) C...) => (or (and A...) C...)
-        for(const eqbool &a : args) {
+        for(const eqbool &a : assumed_falses) {
             if(&a == &excluded)
                 continue;
             if(!a.is_inversion())
@@ -343,9 +347,9 @@ eqbool eqbool_context::reduce_impl(args_ref args, const eqbool &e) const {
     unreachable("unknown node kind");
 }
 
-eqbool eqbool_context::reduce(args_ref args, eqbool e) const {
+eqbool eqbool_context::reduce(args_ref assumed_falses, eqbool e) const {
     for(;;) {
-        eqbool r = reduce_impl(args, e);
+        eqbool r = reduce_impl(assumed_falses, e);
         if(r == e)
             break;
         e = r;

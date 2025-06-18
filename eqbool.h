@@ -254,24 +254,25 @@ private:
     int skip_not(eqbool &e,
                  std::unordered_map<const node_def*, int> &literals);
 
-    eqbool find_value(std::vector<eqbool> &eqs, eqbool e) const;
+    eqbool get_value(std::vector<eqbool> &eqs, eqbool assumed_false) const;
 
     static void add_eq(std::vector<eqbool> &eqs, eqbool e);
 
-    eqbool evaluate(args_ref args, const eqbool &excluded,
+    eqbool evaluate(args_ref assumed_falses, const eqbool &excluded,
                     std::vector<eqbool> &eqs) const;
 
-    eqbool evaluate(args_ref args, const eqbool &excluded,
+    eqbool evaluate(args_ref assumed_falses, const eqbool &excluded,
                     eqbool e, std::vector<eqbool> &eqs) const;
 
-    eqbool evaluate(args_ref args, const eqbool &excluded, eqbool e) const;
+    eqbool evaluate(args_ref assumed_falses, const eqbool &excluded,
+                    eqbool e) const;
 
     static bool contains_all(args_ref p, args_ref q);
 
     // Attempts to reduce e to one of its direct or indirect operands or
     // a constant, assuming all args that are not e are false.
-    eqbool reduce_impl(args_ref args, const eqbool &e) const;
-    eqbool reduce(args_ref args, eqbool e) const;
+    eqbool reduce_impl(args_ref assumed_falses, const eqbool &e) const;
+    eqbool reduce(args_ref assumed_falses, eqbool e) const;
 
     std::ostream &print_helper(std::ostream &s, eqbool e, bool subexpr,
         const std::unordered_map<const node_def*, unsigned> &ids,
