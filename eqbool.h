@@ -168,7 +168,7 @@ public:
     eqbool() = default;
 
     bool is_void() const { return entry_code == 0; }
-    operator bool() const { return !is_void(); }
+    explicit operator bool() const { return !is_void(); }
 
     bool is_false() const { return get_id() == 0; }
     bool is_true() const { return get_id() == 1; }

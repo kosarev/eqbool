@@ -266,7 +266,7 @@ bool eqbool_context::contains_all(args_ref p, args_ref q) {
     auto pi = p.begin();
     for(eqbool qa : q) {
         for(;;) {
-            if(pi == p.end() || *pi > qa)
+            if(pi == p.end() || qa < *pi)
                 return false;
             if(*pi == qa)
                 break;
