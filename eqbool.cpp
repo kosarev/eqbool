@@ -365,7 +365,7 @@ eqbool eqbool_context::reduce(args_ref assumed_falses, eqbool e) const {
     return e;
 }
 
-eqbool eqbool_context::ifelse(eqbool i, eqbool t, eqbool e) {
+eqbool eqbool_context::ifelse_impl(eqbool i, eqbool t, eqbool e) {
     check(i);
     check(t);
     check(e);
@@ -408,6 +408,15 @@ eqbool eqbool_context::ifelse(eqbool i, eqbool t, eqbool e) {
     bool inv = t.is_inversion() && e.is_inversion();
     node_def def(node_kind::ifelse, {i, t ^ inv, e ^ inv}, *this);
     return add_def(def) ^ inv;
+}
+
+eqbool eqbool_context::ifelse(eqbool i, eqbool t, eqbool e) {
+    eqbool r = ifelse_impl(i, t, e);
+
+    if(r.is_const() && t == ~e)
+        store_equiv(i, t ^ r.is_false());
+
+    return r;
 }
 
 static int get_literal(const node_def *def,
@@ -539,6 +548,19 @@ bool eqbool_context::is_unsat(eqbool e) {
     return unsat;
 }
 
+void eqbool_context::store_equiv(eqbool a, eqbool b) {
+    // Assume that the node created earlier is the simpler one.
+    if(a < b)
+        std::swap(a, b);
+
+    if(a.is_inversion()) {
+        a = ~a;
+        b = ~b;
+    }
+
+    a.get_entry().second = b;
+}
+
 bool eqbool_context::is_equiv(eqbool a, eqbool b) {
     eqbool eq = get_eq(a, b);
     if(eq.is_const())
@@ -546,18 +568,8 @@ bool eqbool_context::is_equiv(eqbool a, eqbool b) {
 
     bool equiv = is_unsat(~eq);
 
-    if(equiv) {
-        // Assume that the node created earlier is the simpler one.
-        if(a < b)
-            std::swap(a, b);
-
-        if(a.is_inversion()) {
-            a = ~a;
-            b = ~b;
-        }
-
-        a.get_entry().second = b;
-    }
+    if(equiv)
+        store_equiv(a, b);
 
     return equiv;
 }

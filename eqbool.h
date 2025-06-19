@@ -291,6 +291,10 @@ private:
     eqbool reduce_impl(args_ref assumed_falses, const eqbool &e) const;
     eqbool reduce(args_ref assumed_falses, eqbool e) const;
 
+    eqbool ifelse_impl(eqbool i, eqbool t, eqbool e);
+
+    void store_equiv(eqbool a, eqbool b);
+
     std::ostream &print_helper(std::ostream &s, eqbool e, bool subexpr,
         const std::unordered_map<const node_def*, unsigned> &ids,
         std::vector<eqbool> &worklist) const;
