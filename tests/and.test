@@ -6,3 +6,7 @@ def C
 assert_is (and) 1
 
 assert_is (and A B C) ~(or ~A ~B ~C)
+
+assert_is (and A B) (and B A)
+
+assert_is (and (and A B) C) (and A (and B C))
