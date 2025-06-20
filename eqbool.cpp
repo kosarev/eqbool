@@ -127,6 +127,8 @@ eqbool eqbool_context::add_def(node_def def) {
     bool inserted = r.second;
     if(inserted)
         value = eqbool(*i);
+    else
+        value.propagate();
     return value;
 }
 
