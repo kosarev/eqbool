@@ -98,7 +98,7 @@ inline bool detail::matcher::operator () (const node_def &a,
     return a_args == b_args;
 }
 
-void eqbool::propagate_impl() const {
+void eqbool::propagate_impl() {
     uintptr_t inv = 0;
     uintptr_t code = entry_code;
     for(;;) {
@@ -113,7 +113,7 @@ void eqbool::propagate_impl() const {
     entry_code = code | (inv & detail::inversion_flag);
 }
 
-void eqbool::reduce() const {
+void eqbool::reduce() {
     entry_code |= detail::lock_flag;
     entry_code = get_context().reduce({}, *this).entry_code;
     entry_code &= ~detail::lock_flag;
@@ -287,8 +287,7 @@ bool eqbool_context::contains_all(args_ref p, args_ref q) {
     return true;
 }
 
-eqbool eqbool_context::reduce_impl(args_ref assumed_falses,
-                                   const eqbool &e) const {
+eqbool eqbool_context::reduce_impl(args_ref assumed_falses, eqbool &e) {
     e.propagate();
 
     if(e.is_const())
@@ -359,7 +358,7 @@ eqbool eqbool_context::reduce_impl(args_ref assumed_falses,
     unreachable("unknown node kind");
 }
 
-eqbool eqbool_context::reduce(args_ref assumed_falses, eqbool e) const {
+eqbool eqbool_context::reduce(args_ref assumed_falses, eqbool e) {
     for(;;) {
         eqbool r = reduce_impl(assumed_falses, e);
         if(r == e)

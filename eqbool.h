@@ -111,7 +111,7 @@ private:
     using node_entry = std::pair<const node_def, eqbool>;
 
     // TODO: Should default to reinterpret_cast<uintptr_t>(nullptr)?
-    mutable uintptr_t entry_code = 0;
+    uintptr_t entry_code = 0;
 
     eqbool(uintptr_t entry_code)
         : entry_code(entry_code) {}
@@ -121,11 +121,11 @@ private:
         assert(!(entry_code & detail::inversion_flag));
     }
 
-    void propagate_impl() const;
+    void propagate_impl();
 
-    void reduce() const;
+    void reduce();
 
-    void propagate() const {
+    void propagate() {
         assert(!is_void());
         if(entry_code & detail::lock_flag)
             return;
@@ -285,8 +285,8 @@ private:
 
     // Attempts to reduce e to one of its direct or indirect operands or
     // a constant, assuming all args that are not e are false.
-    eqbool reduce_impl(args_ref assumed_falses, const eqbool &e) const;
-    eqbool reduce(args_ref assumed_falses, eqbool e) const;
+    eqbool reduce_impl(args_ref assumed_falses, eqbool &e);
+    eqbool reduce(args_ref assumed_falses, eqbool e);
 
     eqbool ifelse_impl(eqbool i, eqbool t, eqbool e);
 
