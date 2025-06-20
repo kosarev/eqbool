@@ -35,12 +35,11 @@ int main() {
     eqbool d = eqbools.get("d");
     eqbool e1 = a & ((b | c) | (~a | ((~b | (d | ~c)) & (c | ~b))));
     eqbool e2 = a;
-    assert(e1 != e2);
     assert(!eqbools.get_eq(e1, e2).is_true());
 
     // The equivalence can still be established using SAT.
     assert(eqbools.is_equiv(e1, e2));
 
     // From there on, the expressions are considered identical.
-    assert(e1 == e2);
+    assert(eqbools.get_eq(e1, e2).is_true());
 }

@@ -146,7 +146,6 @@ private:
     }
 
     node_entry &get_entry() const {
-        propagate();
         assert(!is_inversion());
         uintptr_t entry = entry_code & detail::entry_code_mask;
         return *reinterpret_cast<node_entry*>(entry);
@@ -157,7 +156,7 @@ private:
     }
 
     bool is_inversion() const {
-        propagate();
+        assert(!is_void());
         return entry_code & detail::inversion_flag;
     }
 
@@ -172,7 +171,7 @@ private:
     // inversions always come immediately after their
     // non-inverted versions.
     std::size_t get_id() const {
-        propagate();
+        assert(!is_void());
         uintptr_t entry = entry_code & detail::entry_code_mask;
         return reinterpret_cast<node_entry*>(entry)->first.id * 2 +
                is_inversion();
@@ -193,8 +192,6 @@ public:
 
     bool operator == (const eqbool &other) const {
         assert(&get_context() == &other.get_context());
-        propagate();
-        other.propagate();
         return entry_code == other.entry_code;
     }
 
@@ -208,7 +205,7 @@ public:
     }
 
     eqbool operator ~ () const {
-        propagate();
+        assert(!is_void());
         return eqbool(entry_code ^ detail::inversion_flag);
     }
 

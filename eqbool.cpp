@@ -244,6 +244,8 @@ eqbool eqbool_context::evaluate(args_ref assumed_falses,
 eqbool eqbool_context::evaluate(args_ref assumed_falses,
                                 const eqbool &excluded,
                                 eqbool e, std::vector<eqbool> &eqs) const {
+    e.propagate();
+
     eqs = {e};
     for(;;) {
         std::size_t num_eqs = eqs.size();
@@ -287,6 +289,8 @@ bool eqbool_context::contains_all(args_ref p, args_ref q) {
 
 eqbool eqbool_context::reduce_impl(args_ref assumed_falses,
                                    const eqbool &e) const {
+    e.propagate();
+
     if(e.is_const())
         return e;
 
@@ -429,6 +433,8 @@ static int get_literal(const node_def *def,
 
 int eqbool_context::skip_not(eqbool &e,
         std::unordered_map<const node_def*, int> &literals) {
+    e.propagate();
+
     if(e.is_inversion()) {
         e = ~e;
         return -get_literal(&e.get_def(), literals);
