@@ -42,4 +42,11 @@ int main() {
 
     // From there on, the expressions are considered identical.
     assert(eqbools.is_trivially_equiv(e1, e2));
+
+    // They then can be propagated to their simplest known forms.
+    assert(e1 != e2);
+
+    e1.propagate();
+    e2.propagate();
+    assert(e1 == e2);
 }

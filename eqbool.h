@@ -125,6 +125,7 @@ private:
 
     void reduce();
 
+public:
     void propagate() {
         assert(!is_void());
         if(entry_code & detail::lock_flag)
@@ -145,6 +146,7 @@ private:
         }
     }
 
+private:
     node_entry &get_entry() const {
         assert(!is_inversion());
         uintptr_t entry = entry_code & detail::entry_code_mask;

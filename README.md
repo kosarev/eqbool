@@ -29,7 +29,6 @@ int main() {
     eqbool d = eqbools.get("d");
     eqbool e1 = a & ((b | c) | (~a | ((~b | (d | ~c)) & (c | ~b))));
     eqbool e2 = a;
-    assert(e1 != e2);
     assert(!eqbools.is_trivially_equiv(e1, e2));
 
     // The equivalence can still be established using SAT.
@@ -37,6 +36,13 @@ int main() {
 
     // From there on, the expressions are considered identical.
     assert(eqbools.is_trivially_equiv(e1, e2));
+
+    // They then can be propagated to their simplest known forms.
+    assert(e1 != e2);
+
+    e1.propagate();
+    e2.propagate();
+    assert(e1 == e2);
 }
 ```
 [example.cpp](https://github.com/kosarev/eqbool/blob/master/example.cpp)
