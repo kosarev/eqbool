@@ -163,7 +163,7 @@ private:
             if(s.peek() != std::istream::traits_type::eof())
                 fatal("unexpected arguments");
             if(op == "assert_is") {
-                if(a != b) {
+                if(!eqbools.is_trivially_equiv(a, b)) {
                     if(find_mismatches) {
                         std::ostringstream ss;
                         ss << "(" << a << ") vs (" << b << ")";

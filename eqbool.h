@@ -327,6 +327,10 @@ public:
 
     const eqbool_stats &get_stats() const { return stats; }
 
+    bool is_trivially_equiv(eqbool a, eqbool b) {
+        return get_eq(a, b).is_true();
+    }
+
     bool is_unsat(eqbool e);
     bool is_equiv(eqbool a, eqbool b);
 
