@@ -38,12 +38,13 @@ bool contains(const C &c, const E &e) {
 
 }
 
-void detail::hasher::flatten_args(std::vector<eqbool> &flattened, args_ref args) {
+void detail::hasher::flatten_or_impl(std::vector<eqbool> &flattened,
+                                     args_ref args) {
     for(eqbool a : args) {
         if(!a.is_inversion()) {
             const node_def &def = a.get_def();
             if(def.kind == node_kind::or_node) {
-                flatten_args(flattened, def.args);
+                flatten_or_impl(flattened, def.args);
                 continue;
             }
         }
@@ -52,22 +53,50 @@ void detail::hasher::flatten_args(std::vector<eqbool> &flattened, args_ref args)
     }
 }
 
+void detail::hasher::flatten_or(std::vector<eqbool> &flattened,
+                                args_ref args) {
+    flatten_or_impl(flattened, args);
+    std::sort(flattened.begin(), flattened.end());
+}
+
+void detail::hasher::flatten_eq_impl(std::vector<eqbool> &flattened,
+                                     args_ref args) {
+    for(eqbool a : args) {
+        if(!a.is_inversion()) {
+            const node_def &def = a.get_def();
+            if(def.kind == node_kind::eq) {
+                flatten_eq_impl(flattened, def.args);
+                continue;
+            }
+        }
+
+        flattened.push_back(a);
+    }
+}
+
+void detail::hasher::flatten_eq(std::vector<eqbool> &flattened,
+                                args_ref args) {
+    flatten_eq_impl(flattened, args);
+    std::sort(flattened.begin(), flattened.end());
+}
+
 std::size_t detail::hasher::operator () (const node_def &def) const {
     std::size_t h = 0;
     hash(h, def.kind);
     hash(h, def.term);
 
     if(def.kind == node_kind::eq) {
-        hash(h, def.args[0].entry_code);
-        hash(h, def.args[1].entry_code);
+        std::vector<eqbool> args;
+        flatten_eq(args, def.args);
+        for(eqbool a : args)
+            hash(h, a.entry_code);
     } else if(def.kind == node_kind::ifelse) {
         hash(h, def.args[0].entry_code);
         hash(h, def.args[1].entry_code);
         hash(h, def.args[2].entry_code);
     } else if(def.kind == node_kind::or_node) {
         std::vector<eqbool> args;
-        flatten_args(args, def.args);
-        std::sort(args.begin(), args.end());
+        flatten_or(args, def.args);
         for(eqbool a : args)
             hash(h, a.entry_code);
     } else {
@@ -86,15 +115,20 @@ inline bool detail::matcher::operator () (const node_def &a,
     if(a.kind == node_kind::term)
         return true;
 
-    if(a.kind == node_kind::ifelse || a.kind == node_kind::eq)
+    if(a.kind == node_kind::ifelse)
         return a.args == b.args;
+
+    if(a.kind == node_kind::eq) {
+        std::vector<eqbool> a_args, b_args;
+        hasher::flatten_eq(a_args, a.args);
+        hasher::flatten_eq(b_args, b.args);
+        return a_args == b_args;
+    }
 
     assert(a.kind == node_kind::or_node);
     std::vector<eqbool> a_args, b_args;
-    hasher::flatten_args(a_args, a.args);
-    hasher::flatten_args(b_args, b.args);
-    std::sort(a_args.begin(), a_args.end());
-    std::sort(b_args.begin(), b_args.end());
+    hasher::flatten_or(a_args, a.args);
+    hasher::flatten_or(b_args, b.args);
     return a_args == b_args;
 }
 

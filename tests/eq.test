@@ -1,6 +1,7 @@
 
 def A
 def B
+def C
 
 assert_is (eq 0 1) 0
 assert_is (eq 1 0) 0
@@ -16,6 +17,10 @@ assert_is (eq A A) 1
 assert_is (or (eq A B) ~(or A B)) (eq A B)
 
 assert_is (eq A (eq A ~B)) ~B
+
+assert_is (eq A (eq B C)) (eq (eq A B) C)
+
+assert_is (eq A (eq C (eq B A))) (eq B C)
 
 def A2
 def B2

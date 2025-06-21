@@ -76,7 +76,11 @@ struct hasher {
         seed ^= h(v) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
     }
 
-    static void flatten_args(std::vector<eqbool> &flattened, args_ref args);
+    static void flatten_or_impl(std::vector<eqbool> &flattened, args_ref args);
+    static void flatten_or(std::vector<eqbool> &flattened, args_ref args);
+
+    static void flatten_eq_impl(std::vector<eqbool> &flattened, args_ref args);
+    static void flatten_eq(std::vector<eqbool> &flattened, args_ref args);
 
     std::size_t operator () (const node_def &def) const;
 };
