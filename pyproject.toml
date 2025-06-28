@@ -8,6 +8,7 @@ name = 'eqbool'
 version = '0.1a1'
 authors = [{name='Ivan Kosarev', email='mail@ivankosarev.com'}]
 description = 'Testing boolean expressions for equivalence'
+license = 'MIT'
 readme = 'README.md'
 requires-python = '>=3.7'
 classifiers=[
@@ -15,7 +16,6 @@ classifiers=[
     'Intended Audience :: Developers',
     'Intended Audience :: Information Technology',
     'Intended Audience :: Education',
-    'License :: OSI Approved :: MIT License',
     'Operating System :: OS Independent',
     'Programming Language :: C++',
     'Programming Language :: Python :: 3',
