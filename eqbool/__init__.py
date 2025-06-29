@@ -9,5 +9,6 @@
 #   Published under the MIT license.
 
 
-from ._main import main
+from ._eqbool import _Bool
 from ._eqbool import _Context
+from ._main import main
