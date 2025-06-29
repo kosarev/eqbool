@@ -152,7 +152,11 @@ extern "C" PyMODINIT_FUNC PyInit__eqbool(void) {
         return nullptr;
     Py_INCREF(&type_object);
 
-    // TODO: Check the returning value.
-    PyModule_AddObject(m, "_Bool", &type_object.ob_base.ob_base);
+    if (PyModule_AddObject(m, "_Bool", &type_object.ob_base.ob_base) < 0) {
+        Py_DECREF(&type_object);
+        Py_DECREF(m);
+        return nullptr;
+    }
+
     return m;
 }
