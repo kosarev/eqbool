@@ -40,48 +40,47 @@ private:
     PyObject *object;
 };
 
-struct object_instance {
+struct context_instance {
     PyObject_HEAD
-    eqbool_context eqbools;
+    eqbool_context context;
 };
 
-// TODO: Used?
-static inline object_instance *cast_object(PyObject *p) {
-    return reinterpret_cast<object_instance*>(p);
+static inline context_instance *cast_context_instance(PyObject *p) {
+    return reinterpret_cast<context_instance*>(p);
 }
 
 // TODO: Used?
-static inline eqbool_context &cast_eqbools(PyObject *p) {
-    return cast_object(p)->eqbools;
+static inline eqbool_context &cast_context(PyObject *p) {
+    return cast_context_instance(p)->context;
 }
 
 static PyMethodDef methods[] = {
     { nullptr }  // Sentinel.
 };
 
-static PyObject *object_new(PyTypeObject *type, PyObject *args,
-                            PyObject *kwds) {
-    auto *self = cast_object(type->tp_alloc(type, /* nitems= */ 0));
+static PyObject *context_new(PyTypeObject *type, PyObject *args,
+                             PyObject *kwds) {
+    auto *self = cast_context_instance(type->tp_alloc(type, /* nitems= */ 0));
     if(!self)
       return nullptr;
 
-    eqbool_context &eqbools = self->eqbools;
-    ::new(&eqbools) eqbool_context();
+    eqbool_context &context = self->context;
+    ::new(&context) eqbool_context();
     return &self->ob_base;
 }
 
-static void object_dealloc(PyObject *self) {
-    auto &object = *cast_object(self);
-    object.eqbools.~eqbool_context();
+static void context_dealloc(PyObject *self) {
+    auto &object = *cast_context_instance(self);
+    object.context.~eqbool_context();
     Py_TYPE(self)->tp_free(self);
 }
 
-static PyTypeObject type_object = {
+static PyTypeObject context_type_object = {
     PyVarObject_HEAD_INIT(&PyType_Type, 0)
     "eqbool._eqbool._Context",  // tp_name
-    sizeof(object_instance),    // tp_basicsize
+    sizeof(context_instance),   // tp_basicsize
     0,                          // tp_itemsize
-    object_dealloc,             // tp_dealloc
+    context_dealloc,            // tp_dealloc
     0,                          // tp_print
     0,                          // tp_getattr
     0,                          // tp_setattr
@@ -115,7 +114,7 @@ static PyTypeObject type_object = {
     0,                          // tp_dictoffset
     0,                          // tp_init
     0,                          // tp_alloc
-    object_new,                 // tp_new
+    context_new,                // tp_new
     0,                          // tp_free
     0,                          // tp_is_gc
     0,                          // tp_bases
@@ -148,12 +147,13 @@ extern "C" PyMODINIT_FUNC PyInit__eqbool(void) {
     if(!m)
         return nullptr;
 
-    if(PyType_Ready(&type_object) < 0)
+    if(PyType_Ready(&context_type_object) < 0)
         return nullptr;
-    Py_INCREF(&type_object);
+    Py_INCREF(&context_type_object);
 
-    if (PyModule_AddObject(m, "_Context", &type_object.ob_base.ob_base) < 0) {
-        Py_DECREF(&type_object);
+    if (PyModule_AddObject(m, "_Context",
+                           &context_type_object.ob_base.ob_base) < 0) {
+        Py_DECREF(&context_type_object);
         Py_DECREF(m);
         return nullptr;
     }
