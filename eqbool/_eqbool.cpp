@@ -78,7 +78,7 @@ static void object_dealloc(PyObject *self) {
 
 static PyTypeObject type_object = {
     PyVarObject_HEAD_INIT(&PyType_Type, 0)
-    "eqbool._eqbool._Bool",     // tp_name
+    "eqbool._eqbool._Context",  // tp_name
     sizeof(object_instance),    // tp_basicsize
     0,                          // tp_itemsize
     object_dealloc,             // tp_dealloc
@@ -152,7 +152,7 @@ extern "C" PyMODINIT_FUNC PyInit__eqbool(void) {
         return nullptr;
     Py_INCREF(&type_object);
 
-    if (PyModule_AddObject(m, "_Bool", &type_object.ob_base.ob_base) < 0) {
+    if (PyModule_AddObject(m, "_Context", &type_object.ob_base.ob_base) < 0) {
         Py_DECREF(&type_object);
         Py_DECREF(m);
         return nullptr;

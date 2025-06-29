@@ -10,4 +10,4 @@
 
 
 from ._main import main
-from ._eqbool import _Bool
+from ._eqbool import _Context

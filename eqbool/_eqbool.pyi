@@ -1,5 +1,5 @@
 
 import typing
 
-class _Bool:
+class _Context:
     pass
