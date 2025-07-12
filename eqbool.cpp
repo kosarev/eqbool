@@ -109,11 +109,11 @@ std::size_t detail::hasher::operator () (const node_def &def) const {
 inline bool detail::matcher::operator () (const node_def &a,
                                           const node_def &b) const {
     assert(&a.get_context() == &b.get_context());
-    if(a.kind != b.kind || a.term != b.term)
+    if(a.kind != b.kind)
         return false;
 
     if(a.kind == node_kind::term)
-        return true;
+        return a.term == b.term;
 
     if(a.kind == node_kind::ifelse)
         return a.args == b.args;
@@ -131,6 +131,9 @@ inline bool detail::matcher::operator () (const node_def &a,
     hasher::flatten_or(b_args, b.args);
     return a_args == b_args;
 }
+
+term_set_base::~term_set_base()
+{}
 
 void eqbool::propagate_impl() {
     uintptr_t inv = 0;
@@ -166,7 +169,7 @@ eqbool eqbool_context::add_def(node_def def) {
     return value;
 }
 
-eqbool eqbool_context::get(const char *term) {
+eqbool eqbool_context::get(uintptr_t term) {
     return add_def(node_def(term, *this));
 }
 
@@ -628,7 +631,7 @@ std::ostream &eqbool_context::print_helper(
     const node_def &def = e.get_def();
     switch(def.kind) {
     case node_kind::term:
-        return s << def.term;
+        return terms.print(s, def.term);
     case node_kind::or_node:
     case node_kind::ifelse:
     case node_kind::eq:

@@ -21,6 +21,7 @@
 namespace {
 
 using eqbool::eqbool_context;
+using eqbool::term_set;
 using eqbool::eqbool;
 
 [[noreturn]] static void fatal(std::string msg) {
@@ -30,7 +31,8 @@ using eqbool::eqbool;
 
 class test_context {
 private:
-    eqbool_context eqbools;
+    term_set<std::string> terms;
+    eqbool_context eqbools{terms};
     std::unordered_map<std::string, eqbool> nodes;
 
     std::string filepath;
@@ -143,7 +145,7 @@ private:
                 fatal("result node expected");
             eqbool e = parse_expr(s);
             if(!e)
-                e = eqbools.get(r.c_str());
+                e = eqbools.get(terms.add(r));
             if(s.peek() != std::istream::traits_type::eof())
                 fatal("unexpected arguments");
             eqbool &n = nodes[r];

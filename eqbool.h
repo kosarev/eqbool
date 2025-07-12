@@ -17,6 +17,7 @@
 #include <initializer_list>
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 namespace eqbool {
@@ -93,10 +94,10 @@ struct node_def {
     eqbool_context *context = nullptr;
     std::size_t id = 0;
     node_kind kind = node_kind::term;
-    std::string term;
+    uintptr_t term = 0;
     std::vector<eqbool> args;
 
-    node_def(const char *term, eqbool_context &context)
+    node_def(uintptr_t term, eqbool_context &context)
         : context(&context), term(term) {}
 
     node_def(node_kind kind, args_ref args, eqbool_context &context);
@@ -108,6 +109,27 @@ struct node_def {
 };
 
 }  // namespace detail
+
+class term_set_base {
+public:
+    virtual ~term_set_base();
+    virtual std::ostream &print(std::ostream &s, uintptr_t t) const = 0;
+};
+
+template<typename T>
+class term_set : public term_set_base {
+private:
+    std::unordered_set<T> terms;
+
+public:
+    uintptr_t add(const T &t) {
+        return reinterpret_cast<uintptr_t>(&*terms.insert(t).first);
+    }
+
+    std::ostream &print(std::ostream &s, uintptr_t t) const override {
+        return s << *reinterpret_cast<T*>(t);
+    }
+};
 
 class eqbool {
 private:
@@ -259,6 +281,8 @@ private:
 
     std::unordered_map<node_def, eqbool, detail::hasher, detail::matcher> defs;
 
+    const term_set_base &terms;
+
     eqbool_stats stats;
 
     eqbool eqfalse = get_or({});
@@ -309,12 +333,12 @@ private:
     friend eqbool;
 
 public:
-    eqbool_context() = default;
+    eqbool_context(const term_set_base &terms) : terms(terms) {}
 
-    eqbool get_false() const { return eqfalse; }
-    eqbool get_true() const { return eqtrue; }
-    eqbool get(bool b) const { return b ? get_true() : get_false(); }
-    eqbool get(const char *term);
+    eqbool get_false() { return eqfalse; }
+    eqbool get_true() { return eqtrue; }
+    eqbool get(bool b) { return b ? get_true() : get_false(); }
+    eqbool get(uintptr_t term);
 
     eqbool get_or(args_ref args, bool invert_args = false);
     eqbool get_or(eqbool a, eqbool b) { return get_or({a, b}); }

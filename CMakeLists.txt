@@ -39,9 +39,11 @@ check_cxx_compiler_flag("-ferror-limit=1" ERROR_LIMIT_FLAG)
 check_cxx_compiler_flag("-g" G_FLAG)
 
 set(CXX_FLAGS)
+set(EXAMPLE_CXX_FLAGS)
 append_if(DIAGNOSTICS_COLOR_FLAG "-fdiagnostics-color" CXX_FLAGS)
 append_if(NO_EXCEPTIONS_FLAG "-fno-exceptions" CXX_FLAGS)
 append_if(NO_RTTI_FLAG "-fno-rtti" CXX_FLAGS)
+append_if(NO_RTTI_FLAG "-fno-rtti" EXAMPLE_CXX_FLAGS)
 append_if(STD_CXX11_FLAG "-std=c++11" CXX_FLAGS)
 append_if(PEDANTIC_FLAG "-pedantic" CXX_FLAGS)
 append_if(WALL_FLAG "-Wall" CXX_FLAGS)
@@ -66,8 +68,13 @@ append_if(G_FLAG "-g" CXX_FLAGS)
 set(EQBOOL_SRCS
     eqbool.cpp)
 
-set_source_files_properties(${EQBOOL_SRCS}
+set_source_files_properties(
+    ${EQBOOL_SRCS} tester.cpp
     PROPERTIES COMPILE_FLAGS ${CXX_FLAGS})
+
+set_source_files_properties(
+    example.cpp
+    PROPERTIES COMPILE_FLAGS ${EXAMPLE_CXX_FLAGS})
 
 set(CADICAL_SRCS
     cadical/src/analyze.cpp

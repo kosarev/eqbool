@@ -5,7 +5,8 @@ Testing boolean expressions for equivalence.
 #include "eqbool.h"
 
 int main() {
-    eqbool::eqbool_context eqbools;
+    eqbool::term_set<std::string> terms;
+    eqbool::eqbool_context eqbools(terms);
     using eqbool::eqbool;
 
     eqbool eqfalse = eqbools.get_false();
@@ -15,18 +16,18 @@ int main() {
     assert((eqfalse | ~eqfalse) == eqtrue);
 
     // Expressions get simplified on construction.
-    eqbool a = eqbools.get("a");
-    eqbool b = eqbools.get("b");
+    eqbool a = eqbools.get(terms.add("a"));
+    eqbool b = eqbools.get(terms.add("b"));
     assert((~b | ~eqbools.ifelse(a, b, ~b)) == (~a | ~b));
 
     // Identical, but differently spelled expressions are uniquified.
-    eqbool c = eqbools.get("c");
+    eqbool c = eqbools.get(terms.add("c"));
     assert(((a | b) | c) == (a | (b | c)));
 
     // Speed is king, so simplifications that require deep traversals,
     // restructuring of existing nodes and increasing the diversity of
     // SAT clauses are intentionally omitted.
-    eqbool d = eqbools.get("d");
+    eqbool d = eqbools.get(terms.add("d"));
     eqbool e1 = a & ((b | c) | (~a | ((~b | (d | ~c)) & (c | ~b))));
     eqbool e2 = a;
     assert(!eqbools.is_trivially_equiv(e1, e2));

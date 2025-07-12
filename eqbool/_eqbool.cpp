@@ -10,6 +10,8 @@
 
 #include <Python.h>
 
+#include <ostream>
+
 #include "../eqbool.h"
 
 namespace {
@@ -19,8 +21,17 @@ struct bool_instance {
     eqbool::eqbool value;
 };
 
+class term_set : public eqbool::term_set<PyObject*> {
+public:
+    std::ostream &print(std::ostream &s, uintptr_t t) const override {
+        // TODO: Support printing associated objects.
+        return s << t;
+    }
+};
+
 struct context_instance {
     PyObject_HEAD
+    term_set terms;
     eqbool::eqbool_context context;
 };
 
@@ -73,14 +84,19 @@ static PyObject *context_new(PyTypeObject *type, PyObject *args,
     if(!self)
       return nullptr;
 
+    term_set &terms = self->terms;
+    ::new(&terms) term_set();
+
     eqbool::eqbool_context &context = self->context;
-    ::new(&context) eqbool::eqbool_context();
+    ::new(&context) eqbool::eqbool_context(terms);
+
     return &self->ob_base;
 }
 
 static void context_dealloc(PyObject *self) {
     auto &object = *cast_context_instance(self);
     object.context.~eqbool_context();
+    object.terms.~term_set();
     Py_TYPE(self)->tp_free(self);
 }
 
