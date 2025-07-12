@@ -205,9 +205,6 @@ eqbool eqbool_context::get_or(args_ref args, bool invert_args) {
 
     sorted_args.resize(num_args);
 
-    if(num_args == 0)
-        return eqfalse;
-
     if(num_args == 1)
         return sorted_args[0];
 
@@ -508,12 +505,6 @@ bool eqbool_context::is_unsat(eqbool e) {
 
         switch(def.kind) {
         case node_kind::term:
-            if(n.is_const()) {
-                assert(n.is_false());
-                solver->add(-r_lit);
-                solver->add(0);
-                ++stats.num_clauses;
-            }
             continue;
         case node_kind::or_node: {
             std::vector<int> arg_lits;
@@ -619,10 +610,11 @@ std::ostream &eqbool_context::print_helper(
         std::ostream &s, eqbool e, bool subexpr,
         const std::unordered_map<const node_def*, unsigned> &ids,
         std::vector<eqbool> &worklist) const {
+    if (e.is_const())
+        return s << (e.is_false() ? "0" : "1");
+
     bool is_and = false;
     if(e.is_inversion()) {
-        if(e.is_true())
-            return s << "1";
         if((~e).get_def().kind == node_kind::or_node) {
             is_and = true;
             e = ~e;

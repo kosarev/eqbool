@@ -261,7 +261,7 @@ private:
 
     eqbool_stats stats;
 
-    eqbool eqfalse = get("0");
+    eqbool eqfalse = get_or({});
     eqbool eqtrue = ~eqfalse;
 
     eqbool add_def(node_def def);
