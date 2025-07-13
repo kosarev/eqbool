@@ -1,6 +1,21 @@
 # eqbool
 Testing boolean expressions for equivalence.
 
+eqbool is a C++ and Python rewrite of code originally developed as part
+of a symbolic [gate-level Z80 simulator](https://github.com/kosarev/z80/tree/master/tests/z80sim) in pure Python, where
+increasingly complex Boolean expressions describing gate states need to
+be checked for equivalence.
+[Z3](https://github.com/Z3Prover/z3) and several other existing libraries were tried and quickly proven
+too slow for such use, so a custom solution had to be developed.
+
+The library is specifically designed to reduce overall equivalence-check
+times by simplifying expressions in ways that never increase the
+diversity of [SAT](https://en.wikipedia.org/wiki/Boolean_satisfiability_problem) clauses.
+
+Where equivalence cannot be trivially established via simplifications,
+eqbool uses the [CaDiCaL](https://github.com/arminbiere/cadical) solver.
+
+
 ```c++
 #include "eqbool.h"
 
