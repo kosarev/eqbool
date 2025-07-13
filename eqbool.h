@@ -188,6 +188,7 @@ private:
         return entry_code & detail::inversion_flag;
     }
 
+public:
     eqbool_context &get_context() const {
         assert(!is_void());
         uintptr_t entry = entry_code & detail::entry_code_mask;
@@ -208,7 +209,6 @@ private:
     friend class eqbool_context;
     friend struct detail::hasher;
 
-public:
     eqbool() = default;
 
     bool is_void() const { return entry_code == 0; }

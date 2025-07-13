@@ -16,9 +16,13 @@
 
 namespace {
 
-struct bool_instance {
+struct bool_object {
     PyObject_HEAD
     eqbool::eqbool value;
+
+    static bool_object *from_pyobject(PyObject *p) {
+        return reinterpret_cast<bool_object*>(p);
+    }
 
     PyObject *as_pyobject() {
         return reinterpret_cast<PyObject*>(this);
@@ -33,38 +37,30 @@ public:
     }
 };
 
-struct context_instance {
+struct context_object {
     PyObject_HEAD
     term_set terms;
     eqbool::eqbool_context context;
+
+    static context_object *from_pyobject(PyObject *p) {
+        return reinterpret_cast<context_object*>(p);
+    }
 };
 
-static inline bool_instance *cast_bool_instance(PyObject *p) {
-    return reinterpret_cast<bool_instance*>(p);
-}
-
-static inline eqbool::eqbool &cast_bool(PyObject *p) {
-    return cast_bool_instance(p)->value;
-}
-
-static PyObject *bool_invert(PyObject *self, PyObject *Py_UNUSED(args));
+static PyObject *bool_set(PyObject *self, PyObject *args);
+static PyObject *bool_get_id(PyObject *self, PyObject *args);
+static PyObject *bool_invert(PyObject *self, PyObject *args);
 
 static PyMethodDef bool_methods[] = {
+    {"_set", bool_set, METH_O, nullptr},
+    {"_get_id", bool_get_id, METH_NOARGS, nullptr},
     {"_invert", bool_invert, METH_NOARGS, nullptr},
     {}  // Sentinel.
 };
 
-static inline context_instance *cast_context_instance(PyObject *p) {
-    return reinterpret_cast<context_instance*>(p);
-}
-
-static inline eqbool::eqbool_context &cast_context(PyObject *p) {
-    return cast_context_instance(p)->context;
-}
-
 static PyObject *bool_new(PyTypeObject *type, PyObject *Py_UNUSED(args),
                           PyObject *Py_UNUSED(kwds)) {
-    auto *self = cast_bool_instance(type->tp_alloc(type, /* nitems= */ 0));
+    auto *self = bool_object::from_pyobject(type->tp_alloc(type, /* nitems= */ 0));
     if(!self)
       return nullptr;
 
@@ -74,7 +70,7 @@ static PyObject *bool_new(PyTypeObject *type, PyObject *Py_UNUSED(args),
 }
 
 static void bool_dealloc(PyObject *self) {
-    auto &object = *cast_bool_instance(self);
+    auto &object = *bool_object::from_pyobject(self);
     object.value.~eqbool();
     Py_TYPE(self)->tp_free(self);
 }
@@ -82,7 +78,7 @@ static void bool_dealloc(PyObject *self) {
 static PyTypeObject bool_type_object = {
     PyVarObject_HEAD_INIT(&PyType_Type, 0)
     "eqbool._eqbool._Bool",     // tp_name
-    sizeof(bool_instance),      // tp_basicsize
+    sizeof(bool_object),        // tp_basicsize
     0,                          // tp_itemsize
     bool_dealloc,               // tp_dealloc
     0,                          // tp_print
@@ -133,38 +129,19 @@ static PyTypeObject bool_type_object = {
     0,                          // tp_watched
 };
 
-static PyObject *bool_invert(PyObject *self, PyObject *Py_UNUSED(args)) {
-    bool_instance *r = PyObject_New(bool_instance, &bool_type_object);
-    if (r)
-        r->value = ~cast_bool(self);
-    return r->as_pyobject();
-}
-
-static PyObject *context_get(PyObject *self, PyObject *arg) {
-    auto &c = cast_context(self);
-    eqbool::eqbool v;
-    if(arg == Py_False) {
-        v = c.get_false();
-    } else if(arg == Py_True) {
-        v = c.get_true();
-    } else {
-        // TODO: Create a terms associated with the argument.
-    }
-
-    bool_instance *r = PyObject_New(bool_instance, &bool_type_object);
-    if (r)
-        r->value = v;
-    return r->as_pyobject();
-}
+static PyObject *context_get(PyObject *self, PyObject *arg);
+static PyObject *context_get_or(PyObject *self, PyObject *args);
 
 static PyMethodDef context_methods[] = {
     {"_get", context_get, METH_O, nullptr},
+    {"_get_or", context_get_or, METH_VARARGS, nullptr},
     {}  // Sentinel.
 };
 
 static PyObject *context_new(PyTypeObject *type, PyObject *Py_UNUSED(args),
                              PyObject *Py_UNUSED(kwds)) {
-    auto *self = cast_context_instance(type->tp_alloc(type, /* nitems= */ 0));
+    auto *self = context_object::from_pyobject(
+        type->tp_alloc(type, /* nitems= */ 0));
     if(!self)
       return nullptr;
 
@@ -178,7 +155,7 @@ static PyObject *context_new(PyTypeObject *type, PyObject *Py_UNUSED(args),
 }
 
 static void context_dealloc(PyObject *self) {
-    auto &object = *cast_context_instance(self);
+    auto &object = *context_object::from_pyobject(self);
     object.context.~eqbool_context();
     object.terms.~term_set();
     Py_TYPE(self)->tp_free(self);
@@ -187,7 +164,7 @@ static void context_dealloc(PyObject *self) {
 static PyTypeObject context_type_object = {
     PyVarObject_HEAD_INIT(&PyType_Type, 0)
     "eqbool._eqbool._Context",  // tp_name
-    sizeof(context_instance),   // tp_basicsize
+    sizeof(context_object),    // tp_basicsize
     0,                          // tp_itemsize
     context_dealloc,            // tp_dealloc
     0,                          // tp_print
@@ -250,6 +227,67 @@ static PyModuleDef module = {
     nullptr,                    // m_clear
     nullptr,                    // m_free
 };
+
+static PyObject *bool_set(PyObject *self, PyObject *arg) {
+    if(!PyObject_TypeCheck(arg, &bool_type_object)) {
+        PyErr_SetString(PyExc_TypeError, "Expected a _Bool object");
+        return nullptr;
+    }
+
+    eqbool::eqbool v = bool_object::from_pyobject(arg)->value;
+    bool_object::from_pyobject(self)->value = v;
+
+    Py_RETURN_NONE;
+}
+
+static PyObject *bool_get_id(PyObject *self, PyObject *Py_UNUSED(args)) {
+    return PyLong_FromSize_t(bool_object::from_pyobject(self)->value.get_id());
+}
+
+static PyObject *bool_invert(PyObject *self, PyObject *Py_UNUSED(args)) {
+    bool_object *r = PyObject_New(bool_object, &bool_type_object);
+    if (r)
+        r->value = ~bool_object::from_pyobject(self)->value;
+    return r->as_pyobject();
+}
+
+static PyObject *context_get(PyObject *self, PyObject *arg) {
+    auto &context = context_object::from_pyobject(self)->context;
+    eqbool::eqbool v;
+    if(arg == Py_False) {
+        v = context.get_false();
+    } else if(arg == Py_True) {
+        v = context.get_true();
+    } else {
+        // TODO: Create a terms associated with the argument.
+    }
+
+    bool_object *r = PyObject_New(bool_object, &bool_type_object);
+    if (r)
+        r->value = v;
+    return r->as_pyobject();
+}
+
+static PyObject *context_get_or(PyObject *self, PyObject *args) {
+    Py_ssize_t n = PyTuple_Size(args);
+    std::vector<eqbool::eqbool> v;
+    for(Py_ssize_t i = 0; i != n; ++i) {
+        PyObject *arg = PyTuple_GetItem(args, i);
+        if(!PyObject_TypeCheck(arg, &bool_type_object)) {
+            PyErr_SetString(PyExc_TypeError,
+                            "_get_or() arguments must be _Bool objects");
+            return nullptr;
+        }
+        v.push_back(bool_object::from_pyobject(arg)->value);
+    }
+
+    bool_object *r = PyObject_New(bool_object, &bool_type_object);
+    if (r) {
+        auto &context = context_object::from_pyobject(self)->context;
+        r->value = context.get_or(v);
+    }
+    return r->as_pyobject();
+}
 
 }  // anonymous namespace
 

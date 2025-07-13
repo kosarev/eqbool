@@ -12,6 +12,9 @@ import eqbool
 
 
 def main():
+    # Directly created Bool objects have no associated value or context.
+    assert eqbool.Bool().void
+
     c = eqbool.Context()
 
     assert (c.false | ~c.false) == c.true
