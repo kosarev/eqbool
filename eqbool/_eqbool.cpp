@@ -133,16 +133,25 @@ static PyTypeObject bool_type_object = {
     0,                          // tp_watched
 };
 
-static PyObject *get_false(PyObject *self, PyObject *Py_UNUSED(args)) {
-    auto eqfalse = cast_context(self).get_false();
+static PyObject *context_get(PyObject *self, PyObject *arg) {
+    auto &c = cast_context(self);
+    eqbool::eqbool v;
+    if(arg == Py_False) {
+        v = c.get_false();
+    } else if(arg == Py_True) {
+        v = c.get_true();
+    } else {
+        // TODO: Create a terms associated with the argument.
+    }
+
     bool_instance *r = PyObject_New(bool_instance, &bool_type_object);
     if (r)
-        r->value = eqfalse;
+        r->value = v;
     return r->as_pyobject();
 }
 
 static PyMethodDef context_methods[] = {
-    {"_get_false", get_false, METH_NOARGS, nullptr},
+    {"_get", context_get, METH_O, nullptr},
     {}  // Sentinel.
 };
 
