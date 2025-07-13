@@ -4,7 +4,7 @@ Testing boolean expressions for equivalence.
 eqbool is a C++ and Python rewrite of code originally developed as part
 of a symbolic [gate-level Z80 simulator](https://github.com/kosarev/z80/tree/master/tests/z80sim) in pure Python, where
 increasingly complex Boolean expressions representing gate states need to
-be checked for equivalence.
+be repeatedly checked for equivalence.
 [Z3](https://github.com/Z3Prover/z3) and several other existing libraries were tried and quickly proven
 too slow for such use, so a custom solution had to be developed.
 
