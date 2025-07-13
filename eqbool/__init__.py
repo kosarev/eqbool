@@ -13,6 +13,12 @@ from ._eqbool import _Bool
 from ._eqbool import _Context
 from ._main import main
 
+class Bool(_Bool):
+    def __init__(self, v):
+        self.__v = v
+
 
 class Context(_Context):
-    pass
+    def get_false(self):
+        return Bool(self._get_false())
+

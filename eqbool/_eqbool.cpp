@@ -19,6 +19,10 @@ namespace {
 struct bool_instance {
     PyObject_HEAD
     eqbool::eqbool value;
+
+    PyObject *as_pyobject() {
+        return reinterpret_cast<PyObject*>(this);
+    }
 };
 
 class term_set : public eqbool::term_set<PyObject*> {
@@ -40,29 +44,26 @@ static inline bool_instance *cast_bool_instance(PyObject *p) {
 }
 
 // TODO: Used?
+#if 0
 static inline eqbool::eqbool &cast_bool(PyObject *p) {
     return cast_bool_instance(p)->value;
 }
+#endif
 
 static inline context_instance *cast_context_instance(PyObject *p) {
     return reinterpret_cast<context_instance*>(p);
 }
 
-// TODO: Used?
 static inline eqbool::eqbool_context &cast_context(PyObject *p) {
     return cast_context_instance(p)->context;
 }
 
 static PyMethodDef bool_methods[] = {
-    { nullptr }  // Sentinel.
+    {}  // Sentinel.
 };
 
-static PyMethodDef context_methods[] = {
-    { nullptr }  // Sentinel.
-};
-
-static PyObject *bool_new(PyTypeObject *type, PyObject *args,
-                          PyObject *kwds) {
+static PyObject *bool_new(PyTypeObject *type, PyObject *Py_UNUSED(args),
+                          PyObject *Py_UNUSED(kwds)) {
     auto *self = cast_bool_instance(type->tp_alloc(type, /* nitems= */ 0));
     if(!self)
       return nullptr;
@@ -78,8 +79,75 @@ static void bool_dealloc(PyObject *self) {
     Py_TYPE(self)->tp_free(self);
 }
 
-static PyObject *context_new(PyTypeObject *type, PyObject *args,
-                             PyObject *kwds) {
+static PyTypeObject bool_type_object = {
+    PyVarObject_HEAD_INIT(&PyType_Type, 0)
+    "eqbool._eqbool._Bool",     // tp_name
+    sizeof(bool_instance),      // tp_basicsize
+    0,                          // tp_itemsize
+    bool_dealloc,               // tp_dealloc
+    0,                          // tp_print
+    nullptr,                    // tp_getattr
+    nullptr,                    // tp_setattr
+    nullptr,                    // tp_reserved
+    nullptr,                    // tp_repr
+    nullptr,                    // tp_as_number
+    nullptr,                    // tp_as_sequence
+    nullptr,                    // tp_as_mapping
+    nullptr,                    // tp_hash
+    nullptr,                    // tp_call
+    nullptr,                    // tp_str
+    nullptr,                    // tp_getattro
+    nullptr,                    // tp_setattro
+    nullptr,                    // tp_as_buffer
+    Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE,
+                                // tp_flags
+    "Boolean value.",           // tp_doc
+    nullptr,                    // tp_traverse
+    nullptr,                    // tp_clear
+    nullptr,                    // tp_richcompare
+    0,                          // tp_weaklistoffset
+    nullptr,                    // tp_iter
+    nullptr,                    // tp_iternext
+    bool_methods,               // tp_methods
+    nullptr,                    // tp_members
+    nullptr,                    // tp_getset
+    nullptr,                    // tp_base
+    nullptr,                    // tp_dict
+    nullptr,                    // tp_descr_get
+    nullptr,                    // tp_descr_set
+    0,                          // tp_dictoffset
+    nullptr,                    // tp_init
+    nullptr,                    // tp_alloc
+    bool_new,                   // tp_new
+    nullptr,                    // tp_free
+    nullptr,                    // tp_is_gc
+    nullptr,                    // tp_bases
+    nullptr,                    // tp_mro
+    nullptr,                    // tp_cache
+    nullptr,                    // tp_subclasses
+    nullptr,                    // tp_weaklist
+    nullptr,                    // tp_del
+    0,                          // tp_version_tag
+    nullptr,                    // tp_finalize
+    nullptr,                    // tp_vectorcall
+    0,                          // tp_watched
+};
+
+static PyObject *get_false(PyObject *self, PyObject *Py_UNUSED(args)) {
+    auto eqfalse = cast_context(self).get_false();
+    bool_instance *r = PyObject_New(bool_instance, &bool_type_object);
+    if (r)
+        r->value = eqfalse;
+    return r->as_pyobject();
+}
+
+static PyMethodDef context_methods[] = {
+    {"_get_false", get_false, METH_NOARGS, nullptr},
+    {}  // Sentinel.
+};
+
+static PyObject *context_new(PyTypeObject *type, PyObject *Py_UNUSED(args),
+                             PyObject *Py_UNUSED(kwds)) {
     auto *self = cast_context_instance(type->tp_alloc(type, /* nitems= */ 0));
     if(!self)
       return nullptr;
@@ -100,58 +168,6 @@ static void context_dealloc(PyObject *self) {
     Py_TYPE(self)->tp_free(self);
 }
 
-static PyTypeObject bool_type_object = {
-    PyVarObject_HEAD_INIT(&PyType_Type, 0)
-    "eqbool._eqbool._Bool",     // tp_name
-    sizeof(bool_instance),      // tp_basicsize
-    0,                          // tp_itemsize
-    bool_dealloc,               // tp_dealloc
-    0,                          // tp_print
-    0,                          // tp_getattr
-    0,                          // tp_setattr
-    0,                          // tp_reserved
-    0,                          // tp_repr
-    0,                          // tp_as_number
-    0,                          // tp_as_sequence
-    0,                          // tp_as_mapping
-    0,                          // tp_hash
-    0,                          // tp_call
-    0,                          // tp_str
-    0,                          // tp_getattro
-    0,                          // tp_setattro
-    0,                          // tp_as_buffer
-    Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE,
-                                // tp_flags
-    "Boolean value.",           // tp_doc
-    0,                          // tp_traverse
-    0,                          // tp_clear
-    0,                          // tp_richcompare
-    0,                          // tp_weaklistoffset
-    0,                          // tp_iter
-    0,                          // tp_iternext
-    bool_methods,               // tp_methods
-    nullptr,                    // tp_members
-    0,                          // tp_getset
-    0,                          // tp_base
-    0,                          // tp_dict
-    0,                          // tp_descr_get
-    0,                          // tp_descr_set
-    0,                          // tp_dictoffset
-    0,                          // tp_init
-    0,                          // tp_alloc
-    bool_new,                   // tp_new
-    0,                          // tp_free
-    0,                          // tp_is_gc
-    0,                          // tp_bases
-    0,                          // tp_mro
-    0,                          // tp_cache
-    0,                          // tp_subclasses
-    0,                          // tp_weaklist
-    0,                          // tp_del
-    0,                          // tp_version_tag
-    0,                          // tp_finalize
-};
-
 static PyTypeObject context_type_object = {
     PyVarObject_HEAD_INIT(&PyType_Type, 0)
     "eqbool._eqbool._Context",  // tp_name
@@ -159,49 +175,51 @@ static PyTypeObject context_type_object = {
     0,                          // tp_itemsize
     context_dealloc,            // tp_dealloc
     0,                          // tp_print
-    0,                          // tp_getattr
-    0,                          // tp_setattr
-    0,                          // tp_reserved
-    0,                          // tp_repr
-    0,                          // tp_as_number
-    0,                          // tp_as_sequence
-    0,                          // tp_as_mapping
-    0,                          // tp_hash
-    0,                          // tp_call
-    0,                          // tp_str
-    0,                          // tp_getattro
-    0,                          // tp_setattro
-    0,                          // tp_as_buffer
+    nullptr,                    // tp_getattr
+    nullptr,                    // tp_setattr
+    nullptr,                    // tp_reserved
+    nullptr,                    // tp_repr
+    nullptr,                    // tp_as_number
+    nullptr,                    // tp_as_sequence
+    nullptr,                    // tp_as_mapping
+    nullptr,                    // tp_hash
+    nullptr,                    // tp_call
+    nullptr,                    // tp_str
+    nullptr,                    // tp_getattro
+    nullptr,                    // tp_setattro
+    nullptr,                    // tp_as_buffer
     Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE,
                                 // tp_flags
     "Context.",                 // tp_doc
-    0,                          // tp_traverse
-    0,                          // tp_clear
-    0,                          // tp_richcompare
+    nullptr,                    // tp_traverse
+    nullptr,                    // tp_clear
+    nullptr,                    // tp_richcompare
     0,                          // tp_weaklistoffset
-    0,                          // tp_iter
-    0,                          // tp_iternext
+    nullptr,                    // tp_iter
+    nullptr,                    // tp_iternext
     context_methods,            // tp_methods
     nullptr,                    // tp_members
-    0,                          // tp_getset
-    0,                          // tp_base
-    0,                          // tp_dict
-    0,                          // tp_descr_get
-    0,                          // tp_descr_set
+    nullptr,                    // tp_getset
+    nullptr,                    // tp_base
+    nullptr,                    // tp_dict
+    nullptr,                    // tp_descr_get
+    nullptr,                    // tp_descr_set
     0,                          // tp_dictoffset
-    0,                          // tp_init
-    0,                          // tp_alloc
+    nullptr,                    // tp_init
+    nullptr,                    // tp_alloc
     context_new,                // tp_new
-    0,                          // tp_free
-    0,                          // tp_is_gc
-    0,                          // tp_bases
-    0,                          // tp_mro
-    0,                          // tp_cache
-    0,                          // tp_subclasses
-    0,                          // tp_weaklist
-    0,                          // tp_del
+    nullptr,                    // tp_free
+    nullptr,                    // tp_is_gc
+    nullptr,                    // tp_bases
+    nullptr,                    // tp_mro
+    nullptr,                    // tp_cache
+    nullptr,                    // tp_subclasses
+    nullptr,                    // tp_weaklist
+    nullptr,                    // tp_del
     0,                          // tp_version_tag
-    0,                          // tp_finalize
+    nullptr,                    // tp_finalize
+    nullptr,                    // tp_vectorcall
+    0,                          // tp_watched
 };
 
 static PyModuleDef module = {
@@ -219,7 +237,9 @@ static PyModuleDef module = {
 
 }  // anonymous namespace
 
-extern "C" PyMODINIT_FUNC PyInit__eqbool(void) {
+PyMODINIT_FUNC PyInit__eqbool(void);
+
+PyMODINIT_FUNC PyInit__eqbool(void) {
     PyObject *m = PyModule_Create(&module);
     if(!m)
         return nullptr;

@@ -14,6 +14,8 @@ import eqbool
 def main():
     c = eqbool.Context()
 
+    eqfalse = c.get_false()
+
 
 if __name__ == "__main__":
     main()
