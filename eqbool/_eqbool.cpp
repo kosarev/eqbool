@@ -22,7 +22,11 @@ struct bool_object {
     eqbool::eqbool value;
 
     static bool_object *from_pyobject(PyObject *p) {
-        return reinterpret_cast<bool_object*>(p);
+        // Implicitly propagate all referenced values.
+        auto *obj = reinterpret_cast<bool_object*>(p);
+        if(obj->value)
+            obj->value.propagate();
+        return obj;
     }
 
     PyObject *as_pyobject() {
@@ -186,11 +190,13 @@ static PyTypeObject bool_type_object = {
 static PyObject *context_get(PyObject *self, PyObject *arg);
 static PyObject *context_get_or(PyObject *self, PyObject *args);
 static PyObject *context_ifelse(PyObject *self, PyObject *args);
+static PyObject *context_is_equiv(PyObject *self, PyObject *args);
 
 static PyMethodDef context_methods[] = {
     {"_get", context_get, METH_O, nullptr},
     {"_get_or", context_get_or, METH_VARARGS, nullptr},
     {"_ifelse", context_ifelse, METH_VARARGS, nullptr},
+    {"is_equiv", context_is_equiv, METH_VARARGS, nullptr},
     {}  // Sentinel.
 };
 
@@ -345,18 +351,24 @@ static PyObject *context_get(PyObject *self, PyObject *arg) {
     return r->as_pyobject();
 }
 
-static PyObject *context_get_or(PyObject *self, PyObject *args) {
+static bool get_args(std::vector<eqbool::eqbool> &v, PyObject *args) {
     Py_ssize_t n = PyTuple_Size(args);
-    std::vector<eqbool::eqbool> v;
     for(Py_ssize_t i = 0; i != n; ++i) {
         PyObject *arg = PyTuple_GetItem(args, i);
         if(!PyObject_TypeCheck(arg, &bool_type_object)) {
             PyErr_SetString(PyExc_TypeError,
-                            "_get_or() arguments must be _Bool objects");
-            return nullptr;
+                            "Arguments must be _Bool objects");
+            return false;
         }
         v.push_back(bool_object::from_pyobject(arg)->value);
     }
+    return true;
+}
+
+static PyObject *context_get_or(PyObject *self, PyObject *args) {
+    std::vector<eqbool::eqbool> v;
+    if(!get_args(v, args))
+        return nullptr;
 
     bool_object *r = PyObject_New(bool_object, &bool_type_object);
     if (r) {
@@ -367,29 +379,38 @@ static PyObject *context_get_or(PyObject *self, PyObject *args) {
 }
 
 static PyObject *context_ifelse(PyObject *self, PyObject *args) {
-    PyObject *i, *t, *e;
-    if (!PyArg_ParseTuple(args, "OOO", &i, &t, &e)) {
+    std::vector<eqbool::eqbool> v;
+    if(!get_args(v, args))
+        return nullptr;
+
+    if(v.size() != 3) {
         PyErr_SetString(PyExc_TypeError, "Expected exactly 3 arguments");
         return nullptr;
-    }
-
-    for(PyObject *a : {i, t, e}) {
-        if(!PyObject_TypeCheck(a, &bool_type_object)) {
-            PyErr_SetString(PyExc_TypeError,
-                            "_ifelse() arguments must be _Bool objects");
-            return nullptr;
-        }
     }
 
     bool_object *r = PyObject_New(bool_object, &bool_type_object);
     if (r) {
         auto &context = context_object::from_pyobject(self)->context;
-        r->value = context.ifelse(
-            bool_object::from_pyobject(i)->value,
-            bool_object::from_pyobject(t)->value,
-            bool_object::from_pyobject(e)->value);
+        r->value = context.ifelse(v[0], v[1], v[2]);
     }
     return r->as_pyobject();
+}
+
+static PyObject *context_is_equiv(PyObject *self, PyObject *args) {
+    std::vector<eqbool::eqbool> v;
+    if(!get_args(v, args))
+        return nullptr;
+
+    if(v.size() != 2) {
+        PyErr_SetString(PyExc_TypeError, "Expected exactly 2 arguments");
+        return nullptr;
+    }
+
+    auto &context = context_object::from_pyobject(self)->context;
+    if(context.is_equiv(v[0], v[1]))
+        Py_RETURN_TRUE;
+
+    Py_RETURN_FALSE;
 }
 
 }  // anonymous namespace

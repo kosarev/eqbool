@@ -46,6 +46,9 @@ class Bool(_Bool):
     def __or__(self, other):
         return self.context.get_or(self, other)
 
+    def __and__(self, other):
+        return self.context.get_and(self, other)
+
     def __eq__(self, other):
         assert other.context is self.context
         return self.id == other.id
@@ -72,6 +75,9 @@ class Context(_Context):
     def get_or(self, *args):
         assert all(a.context is self for a in args)
         return self._make(self._get_or(*args))
+
+    def get_and(self, *args):
+        return ~self.get_or(*(~a for a in args))
 
     def ifelse(self, i, t, e):
         assert all(a.context is self for a in (i, t, e))
