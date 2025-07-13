@@ -18,6 +18,9 @@ class Bool(_Bool):
     def __init__(self, v):
         self.__v = v
 
+    def __invert__(self):
+        return Bool(self.__v._invert())
+
 
 class Context(_Context):
     def __init__(self):

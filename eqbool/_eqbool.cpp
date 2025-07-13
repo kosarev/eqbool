@@ -43,12 +43,16 @@ static inline bool_instance *cast_bool_instance(PyObject *p) {
     return reinterpret_cast<bool_instance*>(p);
 }
 
-// TODO: Used?
-#if 0
 static inline eqbool::eqbool &cast_bool(PyObject *p) {
     return cast_bool_instance(p)->value;
 }
-#endif
+
+static PyObject *bool_invert(PyObject *self, PyObject *Py_UNUSED(args));
+
+static PyMethodDef bool_methods[] = {
+    {"_invert", bool_invert, METH_NOARGS, nullptr},
+    {}  // Sentinel.
+};
 
 static inline context_instance *cast_context_instance(PyObject *p) {
     return reinterpret_cast<context_instance*>(p);
@@ -57,10 +61,6 @@ static inline context_instance *cast_context_instance(PyObject *p) {
 static inline eqbool::eqbool_context &cast_context(PyObject *p) {
     return cast_context_instance(p)->context;
 }
-
-static PyMethodDef bool_methods[] = {
-    {}  // Sentinel.
-};
 
 static PyObject *bool_new(PyTypeObject *type, PyObject *Py_UNUSED(args),
                           PyObject *Py_UNUSED(kwds)) {
@@ -132,6 +132,13 @@ static PyTypeObject bool_type_object = {
     nullptr,                    // tp_vectorcall
     0,                          // tp_watched
 };
+
+static PyObject *bool_invert(PyObject *self, PyObject *Py_UNUSED(args)) {
+    bool_instance *r = PyObject_New(bool_instance, &bool_type_object);
+    if (r)
+        r->value = ~cast_bool(self);
+    return r->as_pyobject();
+}
 
 static PyObject *context_get(PyObject *self, PyObject *arg) {
     auto &c = cast_context(self);
