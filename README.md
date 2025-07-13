@@ -79,7 +79,7 @@ def main():
     assert (a | b) | c == a | (b | c)
 
     # In the Python API, all values get propagated automatically, so
-    # trivial equivalence can be check by testing for simpple equality.
+    # simple equality can be used to test for trivial equivalence.
     d = ctx.get('d')
     e1 = a & ((b | c) | (~a | ((~b | (d | ~c)) & (c | ~b))))
     e2 = a
