@@ -16,14 +16,19 @@ def main():
     assert eqbool.Bool().void
 
     c = eqbool.Context()
-
     assert c.false | ~c.false == c.true
 
+    # Terms can be strings, numbers and tuples.
     a = c.get('a')
     b = c.get('b')
     e = ~b | ~c.ifelse(a, b, ~b)
-    print(e)
     assert e == ~a | ~b
+
+    # Bool values can be verbalised as usual.
+    print(e)
+
+    c = c.get('c')
+    assert (a | b) | c == a | (b | c)
 
 
 if __name__ == "__main__":
