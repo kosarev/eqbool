@@ -11,6 +11,7 @@
 #include <Python.h>
 
 #include <ostream>
+#include <sstream>
 
 #include "../eqbool.h"
 
@@ -50,11 +51,13 @@ struct context_object {
 static PyObject *bool_set(PyObject *self, PyObject *args);
 static PyObject *bool_get_id(PyObject *self, PyObject *args);
 static PyObject *bool_invert(PyObject *self, PyObject *args);
+static PyObject *bool_print(PyObject *self, PyObject *args);
 
 static PyMethodDef bool_methods[] = {
     {"_set", bool_set, METH_O, nullptr},
     {"_get_id", bool_get_id, METH_NOARGS, nullptr},
     {"_invert", bool_invert, METH_NOARGS, nullptr},
+    {"_print", bool_print, METH_NOARGS, nullptr},
     {}  // Sentinel.
 };
 
@@ -249,6 +252,14 @@ static PyObject *bool_invert(PyObject *self, PyObject *Py_UNUSED(args)) {
     if (r)
         r->value = ~bool_object::from_pyobject(self)->value;
     return r->as_pyobject();
+}
+
+static PyObject *bool_print(PyObject *self, PyObject *Py_UNUSED(args)) {
+    std::ostringstream ss;
+    ss << bool_object::from_pyobject(self)->value;
+    return PyUnicode_FromStringAndSize(
+        ss.str().c_str(),
+        static_cast<Py_ssize_t>(ss.str().size()));
 }
 
 static PyObject *context_get(PyObject *self, PyObject *arg) {

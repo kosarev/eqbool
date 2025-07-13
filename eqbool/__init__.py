@@ -36,6 +36,10 @@ class Bool(_Bool):
         assert not self.void
         return self._get_id()
 
+    def __str__(self):
+        assert not self.void
+        return self._print()
+
     def __invert__(self):
         return type(self)._make(self.context, self._invert())
 

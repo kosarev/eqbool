@@ -18,6 +18,7 @@ def main():
     c = eqbool.Context()
 
     assert (c.false | ~c.false) == c.true
+    print(c.false | ~c.false)
 
 
 if __name__ == "__main__":
