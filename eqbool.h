@@ -122,6 +122,8 @@ private:
     std::unordered_set<T> terms;
 
 public:
+    term_set() = default;
+
     uintptr_t add(const T &t) {
         return reinterpret_cast<uintptr_t>(&*terms.insert(t).first);
     }

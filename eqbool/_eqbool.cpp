@@ -30,8 +30,45 @@ struct bool_object {
     }
 };
 
-class term_set : public eqbool::term_set<PyObject*> {
+struct term_hasher {
+    size_t operator () (PyObject *obj) const {
+        Py_hash_t hash = PyObject_Hash(obj);
+        assert(hash != -1);
+        return static_cast<size_t>(hash);
+    }
+};
+
+struct term_matcher {
+    bool operator () (PyObject *a, PyObject *b) const {
+        if(a == b)
+            return true;
+
+        int eq = PyObject_RichCompareBool(a, b, Py_EQ);
+        assert(eq == 0 || eq == 1);
+        return eq == 1;
+    }
+};
+
+class term_set : public eqbool::term_set_base {
+private:
+    std::unordered_set<PyObject*, term_hasher, term_matcher> terms;
+
 public:
+    term_set() = default;
+
+    ~term_set() override {
+        for(PyObject *t : terms)
+            Py_DECREF(t);
+    }
+
+    PyObject *add(PyObject *t) {
+        auto r = terms.insert(t);
+        bool inserted = r.second;
+        if(inserted)
+            Py_INCREF(t);
+        return *r.first;
+    }
+
     std::ostream &print(std::ostream &s, uintptr_t t) const override {
         // TODO: Support printing associated objects.
         return s << t;
@@ -263,6 +300,7 @@ static PyObject *bool_print(PyObject *self, PyObject *Py_UNUSED(args)) {
 }
 
 static PyObject *context_get(PyObject *self, PyObject *arg) {
+    auto &terms = context_object::from_pyobject(self)->terms;
     auto &context = context_object::from_pyobject(self)->context;
     eqbool::eqbool v;
     if(arg == Py_False) {
@@ -270,7 +308,19 @@ static PyObject *context_get(PyObject *self, PyObject *arg) {
     } else if(arg == Py_True) {
         v = context.get_true();
     } else {
-        // TODO: Create a terms associated with the argument.
+        if(!PyUnicode_CheckExact(arg) &&
+                !PyLong_CheckExact(arg) &&
+                !PyTuple_CheckExact(arg)) {
+            PyErr_SetString(PyExc_TypeError,
+                            "Only immutable types allowed as terms");
+            return nullptr;
+        }
+
+        if(PyObject_Hash(arg) == -1)
+            return nullptr;
+
+        PyObject *t = terms.add(arg);
+        v = context.get(reinterpret_cast<uintptr_t>(t));
     }
 
     bool_object *r = PyObject_New(bool_object, &bool_type_object);
