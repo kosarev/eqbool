@@ -117,7 +117,7 @@ eqbool_module = Extension(
 
 # TODO: Update the URL once we have a published documentation.
 setup(name='eqbool',
-      version='0.1a1',
+      version='0.2',
       description='Testing boolean expressions for equivalence',
       long_description=long_description,
       long_description_content_type='text/markdown',
