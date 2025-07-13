@@ -70,8 +70,22 @@ public:
     }
 
     std::ostream &print(std::ostream &s, uintptr_t t) const override {
-        // TODO: Support printing associated objects.
-        return s << t;
+        auto *term = reinterpret_cast<PyObject*>(t);
+        PyObject *str_obj = PyObject_Str(term);
+        if(str_obj) {
+            const char *str = PyUnicode_AsUTF8(str_obj);
+            if(s)
+                s << str;
+
+            // TODO: Use a RAII wrapper?
+            Py_DECREF(str_obj);
+
+            if(s)
+                return s;
+        }
+
+        // Just print the address as an integer on an error.
+        return s << '<' << t << '>';
     }
 };
 
