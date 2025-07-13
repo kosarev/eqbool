@@ -12,3 +12,7 @@
 from ._eqbool import _Bool
 from ._eqbool import _Context
 from ._main import main
+
+
+class Context(_Context):
+    pass
