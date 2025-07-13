@@ -17,11 +17,13 @@ def main():
 
     c = eqbool.Context()
 
-    assert (c.false | ~c.false) == c.true
+    assert c.false | ~c.false == c.true
 
     a = c.get('a')
     b = c.get('b')
-    print(a | ~b)
+    e = ~b | ~c.ifelse(a, b, ~b)
+    print(e)
+    assert e == ~a | ~b
 
 
 if __name__ == "__main__":

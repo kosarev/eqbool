@@ -185,10 +185,12 @@ static PyTypeObject bool_type_object = {
 
 static PyObject *context_get(PyObject *self, PyObject *arg);
 static PyObject *context_get_or(PyObject *self, PyObject *args);
+static PyObject *context_ifelse(PyObject *self, PyObject *args);
 
 static PyMethodDef context_methods[] = {
     {"_get", context_get, METH_O, nullptr},
     {"_get_or", context_get_or, METH_VARARGS, nullptr},
+    {"_ifelse", context_ifelse, METH_VARARGS, nullptr},
     {}  // Sentinel.
 };
 
@@ -360,6 +362,32 @@ static PyObject *context_get_or(PyObject *self, PyObject *args) {
     if (r) {
         auto &context = context_object::from_pyobject(self)->context;
         r->value = context.get_or(v);
+    }
+    return r->as_pyobject();
+}
+
+static PyObject *context_ifelse(PyObject *self, PyObject *args) {
+    PyObject *i, *t, *e;
+    if (!PyArg_ParseTuple(args, "OOO", &i, &t, &e)) {
+        PyErr_SetString(PyExc_TypeError, "Expected exactly 3 arguments");
+        return nullptr;
+    }
+
+    for(PyObject *a : {i, t, e}) {
+        if(!PyObject_TypeCheck(a, &bool_type_object)) {
+            PyErr_SetString(PyExc_TypeError,
+                            "_ifelse() arguments must be _Bool objects");
+            return nullptr;
+        }
+    }
+
+    bool_object *r = PyObject_New(bool_object, &bool_type_object);
+    if (r) {
+        auto &context = context_object::from_pyobject(self)->context;
+        r->value = context.ifelse(
+            bool_object::from_pyobject(i)->value,
+            bool_object::from_pyobject(t)->value,
+            bool_object::from_pyobject(e)->value);
     }
     return r->as_pyobject();
 }

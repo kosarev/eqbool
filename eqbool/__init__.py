@@ -72,3 +72,7 @@ class Context(_Context):
     def get_or(self, *args):
         assert all(a.context is self for a in args)
         return self._make(self._get_or(*args))
+
+    def ifelse(self, i, t, e):
+        assert all(a.context is self for a in (i, t, e))
+        return self._make(self._ifelse(i, t, e))
