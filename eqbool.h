@@ -155,7 +155,7 @@ private:
 
 public:
     void propagate() {
-        assert(!is_void());
+        assert(!is_undef());
         if(entry_code & detail::lock_flag)
             return;
 
@@ -186,13 +186,13 @@ private:
     }
 
     bool is_inversion() const {
-        assert(!is_void());
+        assert(!is_undef());
         return entry_code & detail::inversion_flag;
     }
 
 public:
     eqbool_context &get_context() const {
-        assert(!is_void());
+        assert(!is_undef());
         uintptr_t entry = entry_code & detail::entry_code_mask;
         return reinterpret_cast<node_entry*>(entry)->first.get_context();
     }
@@ -202,7 +202,7 @@ public:
     // inversions always come immediately after their
     // non-inverted versions.
     std::size_t get_id() const {
-        assert(!is_void());
+        assert(!is_undef());
         uintptr_t entry = entry_code & detail::entry_code_mask;
         return reinterpret_cast<node_entry*>(entry)->first.id * 2 +
                is_inversion();
@@ -213,8 +213,8 @@ public:
 
     eqbool() = default;
 
-    bool is_void() const { return entry_code == 0; }
-    explicit operator bool() const { return !is_void(); }
+    bool is_undef() const { return entry_code == 0; }
+    explicit operator bool() const { return !is_undef(); }
 
     bool is_false() const { return get_id() == 0; }
     bool is_true() const { return get_id() == 1; }
@@ -235,7 +235,7 @@ public:
     }
 
     eqbool operator ~ () const {
-        assert(!is_void());
+        assert(!is_undef());
         return eqbool(entry_code ^ detail::inversion_flag);
     }
 

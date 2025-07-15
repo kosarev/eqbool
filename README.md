@@ -75,8 +75,8 @@ import eqbool
 
 
 def main():
-    # Directly created Bool objects have no associated value or context.
-    assert eqbool.Bool().void
+    # Undefined Bool objects have no associated value or context.
+    assert eqbool.Bool().is_undef
 
     ctx = eqbool.Context()
     assert ctx.false | ~ctx.false == ctx.true

@@ -30,16 +30,16 @@ class Bool(_Bool):
         return b
 
     @property
-    def void(self) -> bool:
+    def is_undef(self) -> bool:
         return self.context is None
 
     @property
     def id(self) -> int:
-        assert not self.void
+        assert not self.is_undef
         return self._get_id()
 
     def __str__(self) -> str:
-        assert not self.void
+        assert not self.is_undef
         return self._print()
 
     def __invert__(self) -> 'Bool':
