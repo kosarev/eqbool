@@ -29,6 +29,14 @@ class Bool(_Bool):
         assert not self.is_undef
         return self._get_id()
 
+    @property
+    def is_false(self):
+        return self.id == 0
+
+    @property
+    def is_true(self):
+        return self.id == 1
+
     def __str__(self) -> str:
         assert not self.is_undef
         return self._print()
