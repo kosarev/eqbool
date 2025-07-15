@@ -81,7 +81,7 @@ def main():
     ctx = eqbool.Context()
     assert ctx.false | ~ctx.false == ctx.true
 
-    # Terms can be strings, numbers and tuples.
+    # Terms can be any hashable objects.
     a = ctx.get('a')
     b = ctx.get('b')
     e = ~b | ~ctx.ifelse(a, b, ~b)

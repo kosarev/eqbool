@@ -20,15 +20,6 @@ class Bool(_Bool):
     def __init__(self) -> None:
         self.context: None | Context = None
 
-    @classmethod
-    def _make(cls, __c: 'Context', __v: _Bool) -> 'Bool':
-        assert isinstance(__c, Context)
-        assert type(__v) is _Bool
-        b = cls()
-        b.context = __c
-        b._set(__v)
-        return b
-
     @property
     def is_undef(self) -> bool:
         return self.context is None
@@ -44,7 +35,7 @@ class Bool(_Bool):
 
     def __invert__(self) -> 'Bool':
         assert self.context is not None
-        return type(self)._make(self.context, self._invert())
+        return self.context._make(self._invert())
 
     def __or__(self, other: 'Bool') -> 'Bool':
         assert self.context is not None
@@ -63,12 +54,22 @@ class Bool(_Bool):
 class Context(_Context):
     def __init__(self, bool_type: typing.Type[Bool] = Bool) -> None:
         self.__t = bool_type
+        self.__terms: dict[typing.Hashable, Bool] = {}
 
     def _make(self, v: _Bool) -> Bool:
-        return self.__t._make(self, v)
+        assert type(v) is _Bool
+        b = self.__t()
+        b.context = self
+        b._set(v)
+        return b
 
-    def get(self, v: bool | str | int | typing.Tuple[typing.Any, ...]) -> Bool:
-        return self._make(self._get(v))
+    def get(self, t: typing.Hashable) -> Bool:
+        b = self.__terms.get(t)
+        if b is None:
+            b = self._make(self._get(t))
+            self.__terms[t] = b
+
+        return b
 
     @property
     def false(self) -> Bool:

@@ -16,7 +16,7 @@ class _Bool:
 
 
 class _Context:
-    def _get(self, v: str | int | typing.Tuple[typing.Any, ...]) -> _Bool:
+    def _get(self, v: typing.Hashable) -> _Bool:
         ...
 
     def _get_or(self, *args: _Bool) -> _Bool:
