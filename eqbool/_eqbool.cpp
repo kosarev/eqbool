@@ -153,12 +153,14 @@ static PyTypeObject bool_type_object = {
 static PyObject *context_get(PyObject *self, PyObject *arg);
 static PyObject *context_get_or(PyObject *self, PyObject *args);
 static PyObject *context_ifelse(PyObject *self, PyObject *args);
+static PyObject *context_get_eq(PyObject *self, PyObject *args);
 static PyObject *context_is_equiv(PyObject *self, PyObject *args);
 
 static PyMethodDef context_methods[] = {
     {"_get", context_get, METH_O, nullptr},
     {"_get_or", context_get_or, METH_VARARGS, nullptr},
     {"_ifelse", context_ifelse, METH_VARARGS, nullptr},
+    {"_get_eq", context_get_eq, METH_VARARGS, nullptr},
     {"is_equiv", context_is_equiv, METH_VARARGS, nullptr},
     {}  // Sentinel.
 };
@@ -343,6 +345,24 @@ static PyObject *context_ifelse(PyObject *self, PyObject *args) {
     if (r) {
         auto &context = context_object::from_pyobject(self)->context;
         r->value = context.ifelse(v[0], v[1], v[2]);
+    }
+    return r->as_pyobject();
+}
+
+static PyObject *context_get_eq(PyObject *self, PyObject *args) {
+    std::vector<eqbool::eqbool> v;
+    if(!get_args(v, args))
+        return nullptr;
+
+    if(v.size() != 2) {
+        PyErr_SetString(PyExc_TypeError, "Expected exactly 2 arguments");
+        return nullptr;
+    }
+
+    bool_object *r = PyObject_New(bool_object, &bool_type_object);
+    if (r) {
+        auto &context = context_object::from_pyobject(self)->context;
+        r->value = context.get_eq(v[0], v[1]);
     }
     return r->as_pyobject();
 }

@@ -24,3 +24,6 @@ class _Context:
 
     def _ifelse(self, i: _Bool, t: _Bool, e: _Bool) -> _Bool:
         ...
+
+    def _get_eq(self, a: _Bool, b: _Bool) -> _Bool:
+        ...

@@ -86,6 +86,10 @@ class Context(_Context):
     def get_and(self, *args: Bool) -> Bool:
         return ~self.get_or(*(~a for a in args))
 
+    def get_eq(self, a: Bool, b: Bool) -> Bool:
+        assert all(a.context is self for a in (a, b))
+        return self._make(self._get_eq(a, b))
+
     def ifelse(self, i: Bool, t: Bool, e: Bool) -> Bool:
         assert all(a.context is self for a in (i, t, e))
         return self._make(self._ifelse(i, t, e))
