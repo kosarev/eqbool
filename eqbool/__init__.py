@@ -30,12 +30,23 @@ class Bool(_Bool):
         return self._get_id()
 
     @property
-    def is_false(self):
-        return self.id == 0
+    def kind(self) -> str:
+        assert not self.is_undef
+        return self._get_kind()
 
     @property
-    def is_true(self):
-        return self.id == 1
+    def is_false(self) -> bool:
+        return self.kind == 'false'
+
+    @property
+    def is_true(self) -> bool:
+        return self.kind == 'true'
+
+    @property
+    def term(self) -> typing.Hashable | None:
+        if self.kind == 'term':
+            return self._get_term()
+        return None
 
     def __str__(self) -> str:
         assert not self.is_undef

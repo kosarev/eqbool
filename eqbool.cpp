@@ -27,7 +27,6 @@
 namespace eqbool {
 
 using detail::node_def;
-using detail::node_kind;
 
 namespace {
 

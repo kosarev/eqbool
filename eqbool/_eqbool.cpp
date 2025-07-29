@@ -68,12 +68,14 @@ struct context_object {
 
 static PyObject *bool_set(PyObject *self, PyObject *args);
 static PyObject *bool_get_id(PyObject *self, PyObject *args);
+static PyObject *bool_get_kind(PyObject *self, PyObject *args);
 static PyObject *bool_invert(PyObject *self, PyObject *args);
 static PyObject *bool_print(PyObject *self, PyObject *args);
 
 static PyMethodDef bool_methods[] = {
     {"_set", bool_set, METH_O, nullptr},
     {"_get_id", bool_get_id, METH_NOARGS, nullptr},
+    {"_get_kind", bool_get_kind, METH_NOARGS, nullptr},
     {"_invert", bool_invert, METH_NOARGS, nullptr},
     {"_print", bool_print, METH_NOARGS, nullptr},
     {}  // Sentinel.
@@ -269,6 +271,32 @@ static PyObject *bool_set(PyObject *self, PyObject *arg) {
 
 static PyObject *bool_get_id(PyObject *self, PyObject *Py_UNUSED(args)) {
     return PyLong_FromSize_t(bool_object::from_pyobject(self)->value.get_id());
+}
+
+static const char *get_kind_name(eqbool::node_kind kind) {
+    switch(kind) {
+    case eqbool::node_kind::term:
+        return "term";
+    case eqbool::node_kind::or_node:
+        return "or";
+    case eqbool::node_kind::ifelse:
+        return "ifelse";
+    case eqbool::node_kind::eq:
+        return "eq";
+    }
+    eqbool::unreachable("unknown node kind");
+}
+
+static PyObject *bool_get_kind(PyObject *self, PyObject *Py_UNUSED(args)) {
+    eqbool::eqbool v = bool_object::from_pyobject(self)->value;
+    const char *kind;
+    if(v.is_const())
+        kind = v.is_false() ? "false" : "true";
+    else if(v.is_inversion())
+        kind = "inv";
+    else
+        kind = get_kind_name(v.get_kind());
+    return PyUnicode_FromString(kind);
 }
 
 static PyObject *bool_invert(PyObject *self, PyObject *Py_UNUSED(args)) {

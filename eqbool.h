@@ -60,9 +60,9 @@ public:
     }
 };
 
-namespace detail {
-
 enum class node_kind { term, or_node, ifelse, eq };
+
+namespace detail {
 
 constexpr uintptr_t inversion_flag = 1;
 constexpr uintptr_t lock_flag = 2;
@@ -185,12 +185,16 @@ private:
         return get_entry().first;
     }
 
+public:
     bool is_inversion() const {
         assert(!is_undef());
         return entry_code & detail::inversion_flag;
     }
 
-public:
+    node_kind get_kind() const {
+        return get_def().kind;
+    }
+
     eqbool_context &get_context() const {
         assert(!is_undef());
         uintptr_t entry = entry_code & detail::entry_code_mask;
