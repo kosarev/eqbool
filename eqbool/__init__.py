@@ -48,6 +48,15 @@ class Bool(_Bool):
             return self._get_term()
         return None
 
+    @property
+    def args(self) -> list['Bool']:
+        assert self.kind not in ('false', 'true', 'not', 'term')
+        assert self.context is not None
+        return [self.context._make(a) for a in self._get_args()]
+
+    def __repr__(self) -> str:
+        return f'<{self.__class__.__name__} {self.kind}>'
+
     def __str__(self) -> str:
         assert not self.is_undef
         return self._print()

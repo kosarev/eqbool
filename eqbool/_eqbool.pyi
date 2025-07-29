@@ -14,6 +14,9 @@ class _Bool:
     def _get_term(self) -> typing.Hashable:
         ...
 
+    def _get_args(self) -> list[_Bool]:
+        ...
+
     def _invert(self) -> _Bool:
         ...
 

@@ -195,6 +195,8 @@ public:
         return get_def().kind;
     }
 
+    args_ref get_args() const;
+
     eqbool_context &get_context() const {
         assert(!is_undef());
         uintptr_t entry = entry_code & detail::entry_code_mask;
@@ -377,6 +379,10 @@ inline detail::node_def::node_def(node_kind kind, args_ref args,
                                   eqbool_context &context)
     : context(&context), kind(kind), args(args.begin(), args.end())
 {}
+
+inline args_ref eqbool::get_args() const {
+    return get_def().args;
+}
 
 inline eqbool eqbool::operator | (eqbool other) const {
     return get_context().get_or(*this, other);

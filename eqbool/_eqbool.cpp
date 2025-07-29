@@ -69,6 +69,7 @@ struct context_object {
 static PyObject *bool_set(PyObject *self, PyObject *args);
 static PyObject *bool_get_id(PyObject *self, PyObject *args);
 static PyObject *bool_get_kind(PyObject *self, PyObject *args);
+static PyObject *bool_get_args(PyObject *self, PyObject *args);
 static PyObject *bool_invert(PyObject *self, PyObject *args);
 static PyObject *bool_print(PyObject *self, PyObject *args);
 
@@ -76,6 +77,7 @@ static PyMethodDef bool_methods[] = {
     {"_set", bool_set, METH_O, nullptr},
     {"_get_id", bool_get_id, METH_NOARGS, nullptr},
     {"_get_kind", bool_get_kind, METH_NOARGS, nullptr},
+    {"_get_args", bool_get_args, METH_NOARGS, nullptr},
     {"_invert", bool_invert, METH_NOARGS, nullptr},
     {"_print", bool_print, METH_NOARGS, nullptr},
     {}  // Sentinel.
@@ -297,6 +299,27 @@ static PyObject *bool_get_kind(PyObject *self, PyObject *Py_UNUSED(args)) {
     else
         kind = get_kind_name(v.get_kind());
     return PyUnicode_FromString(kind);
+}
+
+static PyObject *bool_get_args(PyObject *self, PyObject *Py_UNUSED(args)) {
+    eqbool::args_ref args = bool_object::from_pyobject(self)->value.get_args();
+    std::size_t num_args = args.size();
+    PyObject *list = PyList_New(static_cast<Py_ssize_t>(num_args));
+    if(!list)
+        return nullptr;
+
+    for(std::size_t i = 0; i != num_args; ++i) {
+        bool_object *arg = PyObject_New(bool_object, &bool_type_object);
+        if(!arg) {
+            Py_DECREF(list);
+            return nullptr;
+        }
+
+        arg->value = args[i];
+        PyList_SET_ITEM(list, static_cast<Py_ssize_t>(i), arg->as_pyobject());
+    }
+
+    return list;
 }
 
 static PyObject *bool_invert(PyObject *self, PyObject *Py_UNUSED(args)) {
