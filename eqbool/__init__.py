@@ -43,10 +43,17 @@ class Bool(_Bool):
         return self.kind == 'true'
 
     @property
+    def is_const(self) -> bool:
+        return self.kind in ('false', 'true')
+
+    @property
+    def is_term(self) -> bool:
+        return self.kind == 'term'
+
+    @property
     def term(self) -> typing.Hashable | None:
-        if self.kind == 'term':
-            return self._get_term()
-        return None
+        assert self.is_term
+        return self._get_term()
 
     @property
     def args(self) -> list['Bool']:
