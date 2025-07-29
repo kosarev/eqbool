@@ -293,7 +293,7 @@ static PyObject *bool_get_kind(PyObject *self, PyObject *Py_UNUSED(args)) {
     if(v.is_const())
         kind = v.is_false() ? "false" : "true";
     else if(v.is_inversion())
-        kind = "inv";
+        kind = "not";
     else
         kind = get_kind_name(v.get_kind());
     return PyUnicode_FromString(kind);
