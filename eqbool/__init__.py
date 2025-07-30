@@ -62,7 +62,10 @@ class Bool(_Bool):
         return [self.context._make(a) for a in self._get_args()]
 
     def __repr__(self) -> str:
-        return f'<{self.__class__.__name__} {self.kind}>'
+        v = self.kind
+        if v == 'term':
+            v = repr(self.term)
+        return f'<{self.__class__.__name__} {v}>'
 
     def __str__(self) -> str:
         assert not self.is_undef

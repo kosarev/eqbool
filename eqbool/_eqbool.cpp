@@ -69,6 +69,7 @@ struct context_object {
 static PyObject *bool_set(PyObject *self, PyObject *args);
 static PyObject *bool_get_id(PyObject *self, PyObject *args);
 static PyObject *bool_get_kind(PyObject *self, PyObject *args);
+static PyObject *bool_get_term(PyObject *self, PyObject *args);
 static PyObject *bool_get_args(PyObject *self, PyObject *args);
 static PyObject *bool_invert(PyObject *self, PyObject *args);
 static PyObject *bool_print(PyObject *self, PyObject *args);
@@ -77,6 +78,7 @@ static PyMethodDef bool_methods[] = {
     {"_set", bool_set, METH_O, nullptr},
     {"_get_id", bool_get_id, METH_NOARGS, nullptr},
     {"_get_kind", bool_get_kind, METH_NOARGS, nullptr},
+    {"_get_term", bool_get_term, METH_NOARGS, nullptr},
     {"_get_args", bool_get_args, METH_NOARGS, nullptr},
     {"_invert", bool_invert, METH_NOARGS, nullptr},
     {"_print", bool_print, METH_NOARGS, nullptr},
@@ -299,6 +301,13 @@ static PyObject *bool_get_kind(PyObject *self, PyObject *Py_UNUSED(args)) {
     else
         kind = get_kind_name(v.get_kind());
     return PyUnicode_FromString(kind);
+}
+
+static PyObject *bool_get_term(PyObject *self, PyObject *Py_UNUSED(args)) {
+    eqbool::eqbool v = bool_object::from_pyobject(self)->value;
+    auto *term = reinterpret_cast<PyObject*>(v.get_term());
+    Py_INCREF(term);
+    return term;
 }
 
 static PyObject *bool_get_args(PyObject *self, PyObject *Py_UNUSED(args)) {

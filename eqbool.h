@@ -195,6 +195,12 @@ public:
         return get_def().kind;
     }
 
+    uintptr_t get_term() const {
+        const node_def &def = get_def();
+        assert(def.kind == node_kind::term);
+        return def.term;
+    }
+
     args_ref get_args() const;
 
     eqbool_context &get_context() const {
