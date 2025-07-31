@@ -17,22 +17,17 @@
 
 namespace {
 
-struct bool_object {
-    PyObject_HEAD
-    eqbool::eqbool value;
+eqbool::eqbool eqbool_from_pyobject(PyObject *p) {
+    unsigned long n = PyLong_AsUnsignedLong(p);
+    assert(n != static_cast<unsigned long>(-1));
+    eqbool::eqbool v = eqbool::eqbool::from_uintptr(n);
+    v.propagate();
+    return v;
+}
 
-    static bool_object *from_pyobject(PyObject *p) {
-        // Implicitly propagate all referenced values.
-        auto *obj = reinterpret_cast<bool_object*>(p);
-        if(obj->value)
-            obj->value.propagate();
-        return obj;
-    }
-
-    PyObject *as_pyobject() {
-        return reinterpret_cast<PyObject*>(this);
-    }
-};
+PyObject *pyobject_from_eqbool(eqbool::eqbool v) {
+    return PyLong_FromUnsignedLong(v.as_uintptr());
+}
 
 class term_set : public eqbool::term_set_base {
 public:
@@ -66,95 +61,12 @@ struct context_object {
     }
 };
 
-static PyObject *bool_set(PyObject *self, PyObject *args);
-static PyObject *bool_get_id(PyObject *self, PyObject *args);
-static PyObject *bool_get_kind(PyObject *self, PyObject *args);
-static PyObject *bool_get_term(PyObject *self, PyObject *args);
-static PyObject *bool_get_args(PyObject *self, PyObject *args);
-static PyObject *bool_invert(PyObject *self, PyObject *args);
-static PyObject *bool_print(PyObject *self, PyObject *args);
-
-static PyMethodDef bool_methods[] = {
-    {"_set", bool_set, METH_O, nullptr},
-    {"_get_id", bool_get_id, METH_NOARGS, nullptr},
-    {"_get_kind", bool_get_kind, METH_NOARGS, nullptr},
-    {"_get_term", bool_get_term, METH_NOARGS, nullptr},
-    {"_get_args", bool_get_args, METH_NOARGS, nullptr},
-    {"_invert", bool_invert, METH_NOARGS, nullptr},
-    {"_print", bool_print, METH_NOARGS, nullptr},
-    {}  // Sentinel.
-};
-
-static PyObject *bool_new(PyTypeObject *type, PyObject *Py_UNUSED(args),
-                          PyObject *Py_UNUSED(kwds)) {
-    auto *self = bool_object::from_pyobject(type->tp_alloc(type, /* nitems= */ 0));
-    if(!self)
-      return nullptr;
-
-    eqbool::eqbool &value = self->value;
-    ::new(&value) eqbool::eqbool();
-    return &self->ob_base;
-}
-
-static void bool_dealloc(PyObject *self) {
-    auto &object = *bool_object::from_pyobject(self);
-    object.value.~eqbool();
-    Py_TYPE(self)->tp_free(self);
-}
-
-static PyTypeObject bool_type_object = {
-    PyVarObject_HEAD_INIT(&PyType_Type, 0)
-    "eqbool._eqbool._Bool",     // tp_name
-    sizeof(bool_object),        // tp_basicsize
-    0,                          // tp_itemsize
-    bool_dealloc,               // tp_dealloc
-    0,                          // tp_print
-    nullptr,                    // tp_getattr
-    nullptr,                    // tp_setattr
-    nullptr,                    // tp_reserved
-    nullptr,                    // tp_repr
-    nullptr,                    // tp_as_number
-    nullptr,                    // tp_as_sequence
-    nullptr,                    // tp_as_mapping
-    nullptr,                    // tp_hash
-    nullptr,                    // tp_call
-    nullptr,                    // tp_str
-    nullptr,                    // tp_getattro
-    nullptr,                    // tp_setattro
-    nullptr,                    // tp_as_buffer
-    Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE,
-                                // tp_flags
-    "Boolean value.",           // tp_doc
-    nullptr,                    // tp_traverse
-    nullptr,                    // tp_clear
-    nullptr,                    // tp_richcompare
-    0,                          // tp_weaklistoffset
-    nullptr,                    // tp_iter
-    nullptr,                    // tp_iternext
-    bool_methods,               // tp_methods
-    nullptr,                    // tp_members
-    nullptr,                    // tp_getset
-    nullptr,                    // tp_base
-    nullptr,                    // tp_dict
-    nullptr,                    // tp_descr_get
-    nullptr,                    // tp_descr_set
-    0,                          // tp_dictoffset
-    nullptr,                    // tp_init
-    nullptr,                    // tp_alloc
-    bool_new,                   // tp_new
-    nullptr,                    // tp_free
-    nullptr,                    // tp_is_gc
-    nullptr,                    // tp_bases
-    nullptr,                    // tp_mro
-    nullptr,                    // tp_cache
-    nullptr,                    // tp_subclasses
-    nullptr,                    // tp_weaklist
-    nullptr,                    // tp_del
-    0,                          // tp_version_tag
-    nullptr,                    // tp_finalize
-    nullptr,                    // tp_vectorcall
-    0,                          // tp_watched
-};
+static PyObject *bool_get_id(PyObject *self, PyObject *p);
+static PyObject *bool_get_kind(PyObject *self, PyObject *p);
+static PyObject *bool_get_term(PyObject *self, PyObject *p);
+static PyObject *bool_get_args(PyObject *self, PyObject *p);
+static PyObject *bool_invert(PyObject *self, PyObject *p);
+static PyObject *bool_print(PyObject *self, PyObject *p);
 
 static PyObject *context_get(PyObject *self, PyObject *arg);
 static PyObject *context_get_or(PyObject *self, PyObject *args);
@@ -163,11 +75,18 @@ static PyObject *context_get_eq(PyObject *self, PyObject *args);
 static PyObject *context_is_equiv(PyObject *self, PyObject *args);
 
 static PyMethodDef context_methods[] = {
+    {"_get_id", bool_get_id, METH_O, nullptr},
+    {"_get_kind", bool_get_kind, METH_O, nullptr},
+    {"_get_term", bool_get_term, METH_O, nullptr},
+    {"_get_args", bool_get_args, METH_O, nullptr},
+    {"_invert", bool_invert, METH_O, nullptr},
+    {"_print", bool_print, METH_O, nullptr},
+
     {"_get", context_get, METH_O, nullptr},
     {"_get_or", context_get_or, METH_VARARGS, nullptr},
     {"_ifelse", context_ifelse, METH_VARARGS, nullptr},
     {"_get_eq", context_get_eq, METH_VARARGS, nullptr},
-    {"is_equiv", context_is_equiv, METH_VARARGS, nullptr},
+    {"_is_equiv", context_is_equiv, METH_VARARGS, nullptr},
     {}  // Sentinel.
 };
 
@@ -261,20 +180,8 @@ static PyModuleDef module = {
     nullptr,                    // m_free
 };
 
-static PyObject *bool_set(PyObject *self, PyObject *arg) {
-    if(!PyObject_TypeCheck(arg, &bool_type_object)) {
-        PyErr_SetString(PyExc_TypeError, "Expected a _Bool object");
-        return nullptr;
-    }
-
-    eqbool::eqbool v = bool_object::from_pyobject(arg)->value;
-    bool_object::from_pyobject(self)->value = v;
-
-    Py_RETURN_NONE;
-}
-
-static PyObject *bool_get_id(PyObject *self, PyObject *Py_UNUSED(args)) {
-    return PyLong_FromSize_t(bool_object::from_pyobject(self)->value.get_id());
+static PyObject *bool_get_id(PyObject *Py_UNUSED(self), PyObject *p) {
+    return PyLong_FromSize_t(eqbool_from_pyobject(p).get_id());
 }
 
 static const char *get_kind_name(eqbool::node_kind kind) {
@@ -291,8 +198,8 @@ static const char *get_kind_name(eqbool::node_kind kind) {
     eqbool::unreachable("unknown node kind");
 }
 
-static PyObject *bool_get_kind(PyObject *self, PyObject *Py_UNUSED(args)) {
-    eqbool::eqbool v = bool_object::from_pyobject(self)->value;
+static PyObject *bool_get_kind(PyObject *Py_UNUSED(self), PyObject *p) {
+    eqbool::eqbool v = eqbool_from_pyobject(p);
     const char *kind;
     if(v.is_const())
         kind = v.is_false() ? "false" : "true";
@@ -303,44 +210,40 @@ static PyObject *bool_get_kind(PyObject *self, PyObject *Py_UNUSED(args)) {
     return PyUnicode_FromString(kind);
 }
 
-static PyObject *bool_get_term(PyObject *self, PyObject *Py_UNUSED(args)) {
-    eqbool::eqbool v = bool_object::from_pyobject(self)->value;
+static PyObject *bool_get_term(PyObject *Py_UNUSED(self), PyObject *p) {
+    eqbool::eqbool v = eqbool_from_pyobject(p);
     auto *term = reinterpret_cast<PyObject*>(v.get_term());
     Py_INCREF(term);
     return term;
 }
 
-static PyObject *bool_get_args(PyObject *self, PyObject *Py_UNUSED(args)) {
-    eqbool::args_ref args = bool_object::from_pyobject(self)->value.get_args();
+static PyObject *bool_get_args(PyObject *Py_UNUSED(self), PyObject *p) {
+    eqbool::args_ref args = eqbool_from_pyobject(p).get_args();
     std::size_t num_args = args.size();
     PyObject *list = PyList_New(static_cast<Py_ssize_t>(num_args));
     if(!list)
         return nullptr;
 
     for(std::size_t i = 0; i != num_args; ++i) {
-        bool_object *arg = PyObject_New(bool_object, &bool_type_object);
+        PyObject *arg = pyobject_from_eqbool(args[i]);
         if(!arg) {
             Py_DECREF(list);
             return nullptr;
         }
 
-        arg->value = args[i];
-        PyList_SET_ITEM(list, static_cast<Py_ssize_t>(i), arg->as_pyobject());
+        PyList_SET_ITEM(list, static_cast<Py_ssize_t>(i), arg);
     }
 
     return list;
 }
 
-static PyObject *bool_invert(PyObject *self, PyObject *Py_UNUSED(args)) {
-    bool_object *r = PyObject_New(bool_object, &bool_type_object);
-    if (r)
-        r->value = ~bool_object::from_pyobject(self)->value;
-    return r->as_pyobject();
+static PyObject *bool_invert(PyObject *Py_UNUSED(self), PyObject *p) {
+    return pyobject_from_eqbool(~eqbool_from_pyobject(p));
 }
 
-static PyObject *bool_print(PyObject *self, PyObject *Py_UNUSED(args)) {
+static PyObject *bool_print(PyObject *Py_UNUSED(self), PyObject *p) {
     std::ostringstream ss;
-    ss << bool_object::from_pyobject(self)->value;
+    ss << eqbool_from_pyobject(p);
     return PyUnicode_FromStringAndSize(
         ss.str().c_str(),
         static_cast<Py_ssize_t>(ss.str().size()));
@@ -358,22 +261,14 @@ static PyObject *context_get(PyObject *self, PyObject *arg) {
         v = context.get(reinterpret_cast<uintptr_t>(arg));
     }
 
-    bool_object *r = PyObject_New(bool_object, &bool_type_object);
-    if (r)
-        r->value = v;
-    return r->as_pyobject();
+    return pyobject_from_eqbool(v);
 }
 
 static bool get_args(std::vector<eqbool::eqbool> &v, PyObject *args) {
     Py_ssize_t n = PyTuple_Size(args);
     for(Py_ssize_t i = 0; i != n; ++i) {
         PyObject *arg = PyTuple_GetItem(args, i);
-        if(!PyObject_TypeCheck(arg, &bool_type_object)) {
-            PyErr_SetString(PyExc_TypeError,
-                            "Arguments must be _Bool objects");
-            return false;
-        }
-        v.push_back(bool_object::from_pyobject(arg)->value);
+        v.push_back(eqbool_from_pyobject(arg));
     }
     return true;
 }
@@ -383,12 +278,8 @@ static PyObject *context_get_or(PyObject *self, PyObject *args) {
     if(!get_args(v, args))
         return nullptr;
 
-    bool_object *r = PyObject_New(bool_object, &bool_type_object);
-    if (r) {
-        auto &context = context_object::from_pyobject(self)->context;
-        r->value = context.get_or(v);
-    }
-    return r->as_pyobject();
+    auto &context = context_object::from_pyobject(self)->context;
+    return pyobject_from_eqbool(context.get_or(v));
 }
 
 static PyObject *context_ifelse(PyObject *self, PyObject *args) {
@@ -401,12 +292,8 @@ static PyObject *context_ifelse(PyObject *self, PyObject *args) {
         return nullptr;
     }
 
-    bool_object *r = PyObject_New(bool_object, &bool_type_object);
-    if (r) {
-        auto &context = context_object::from_pyobject(self)->context;
-        r->value = context.ifelse(v[0], v[1], v[2]);
-    }
-    return r->as_pyobject();
+    auto &context = context_object::from_pyobject(self)->context;
+    return pyobject_from_eqbool(context.ifelse(v[0], v[1], v[2]));
 }
 
 static PyObject *context_get_eq(PyObject *self, PyObject *args) {
@@ -419,12 +306,8 @@ static PyObject *context_get_eq(PyObject *self, PyObject *args) {
         return nullptr;
     }
 
-    bool_object *r = PyObject_New(bool_object, &bool_type_object);
-    if (r) {
-        auto &context = context_object::from_pyobject(self)->context;
-        r->value = context.get_eq(v[0], v[1]);
-    }
-    return r->as_pyobject();
+    auto &context = context_object::from_pyobject(self)->context;
+    return pyobject_from_eqbool(context.get_eq(v[0], v[1]));
 }
 
 static PyObject *context_is_equiv(PyObject *self, PyObject *args) {
@@ -453,25 +336,13 @@ PyMODINIT_FUNC PyInit__eqbool(void) {
     if(!m)
         return nullptr;
 
-    if(PyType_Ready(&bool_type_object) < 0)
-        return nullptr;
     if(PyType_Ready(&context_type_object) < 0)
         return nullptr;
 
-    Py_INCREF(&bool_type_object);
     Py_INCREF(&context_type_object);
-
-    if (PyModule_AddObject(m, "_Bool",
-                           &bool_type_object.ob_base.ob_base) < 0) {
-        Py_DECREF(&bool_type_object);
-        Py_DECREF(&context_type_object);
-        Py_DECREF(m);
-        return nullptr;
-    }
 
     if (PyModule_AddObject(m, "_Context",
                            &context_type_object.ob_base.ob_base) < 0) {
-        Py_DECREF(&bool_type_object);
         Py_DECREF(&context_type_object);
         Py_DECREF(m);
         return nullptr;

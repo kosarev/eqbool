@@ -220,6 +220,14 @@ public:
                is_inversion();
     }
 
+    uintptr_t as_uintptr() const {
+        return entry_code;
+    }
+
+    static eqbool from_uintptr(uintptr_t p) {
+        return eqbool(p);
+    }
+
     friend class eqbool_context;
     friend struct detail::hasher;
 

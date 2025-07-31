@@ -665,6 +665,9 @@ std::ostream &eqbool_context::print_helper(
 std::ostream &eqbool_context::print(std::ostream &s, eqbool e) const {
     check(e);
 
+    if(e.is_const())
+        return s << int(e.is_true());
+
     // Collect common subexpressions.
     std::unordered_set<const node_def*> seen;
     std::unordered_map<const node_def*, unsigned> ids;

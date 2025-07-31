@@ -9,16 +9,20 @@
 #   Published under the MIT license.
 
 
-from ._eqbool import _Bool
 from ._eqbool import _Context
 from ._main import main
 
 import typing
 
 
-class Bool(_Bool):
+class Bool:
+    _p: int
+    context: typing.Union[None, 'Context']
+
+    __slots__ = '_p', 'context'
+
     def __init__(self) -> None:
-        self.context: None | Context = None
+        self.context = None
 
     @property
     def is_undef(self) -> bool:
@@ -26,13 +30,13 @@ class Bool(_Bool):
 
     @property
     def id(self) -> int:
-        assert not self.is_undef
-        return self._get_id()
+        assert self.context is not None
+        return self.context._get_id(self._p)
 
     @property
     def kind(self) -> str:
-        assert not self.is_undef
-        return self._get_kind()
+        assert self.context is not None
+        return self.context._get_kind(self._p)
 
     @property
     def is_false(self) -> bool:
@@ -53,10 +57,11 @@ class Bool(_Bool):
     @property
     def term(self) -> typing.Hashable | None:
         assert self.is_term
-        return self._get_term()
+        return self.context._get_term(self._p)
 
     @property
     def args(self) -> list['Bool']:
+        assert 0
         assert self.kind not in ('false', 'true', 'not', 'term')
         assert self.context is not None
         return [self.context._make(a) for a in self._get_args()]
@@ -68,12 +73,12 @@ class Bool(_Bool):
         return f'<{self.__class__.__name__} {v}>'
 
     def __str__(self) -> str:
-        assert not self.is_undef
-        return self._print()
+        assert self.context is not None
+        return self.context._print(self._p)
 
     def __invert__(self) -> 'Bool':
         assert self.context is not None
-        return self.context._make(self._invert())
+        return self.context._make(self.context._invert(self._p))
 
     def __or__(self, other: 'Bool') -> 'Bool':
         assert self.context is not None
@@ -93,12 +98,15 @@ class Context(_Context):
     def __init__(self, bool_type: typing.Type[Bool] = Bool) -> None:
         self.__t = bool_type
         self.__terms: dict[typing.Hashable, Bool] = {}
+        self.__nodes: dict[int, Bool] = {}
 
-    def _make(self, v: _Bool) -> Bool:
-        assert type(v) is _Bool
-        b = self.__t()
-        b.context = self
-        b._set(v)
+    def _make(self, p: int) -> Bool:
+        b = self.__nodes.get(p)
+        if b is None:
+            b = self.__nodes[p] = self.__t()
+            b.context = self
+            b._p = p
+
         return b
 
     def get(self, t: typing.Hashable) -> Bool:
@@ -119,15 +127,19 @@ class Context(_Context):
 
     def get_or(self, *args: Bool) -> Bool:
         assert all(a.context is self for a in args)
-        return self._make(self._get_or(*args))
+        return self._make(self._get_or(*(a._p for a in args)))
 
     def get_and(self, *args: Bool) -> Bool:
         return ~self.get_or(*(~a for a in args))
 
     def get_eq(self, a: Bool, b: Bool) -> Bool:
         assert all(a.context is self for a in (a, b))
-        return self._make(self._get_eq(a, b))
+        return self._make(self._get_eq(a._p, b._p))
 
     def ifelse(self, i: Bool, t: Bool, e: Bool) -> Bool:
         assert all(a.context is self for a in (i, t, e))
-        return self._make(self._ifelse(i, t, e))
+        return self._make(self._ifelse(i._p, t._p, e._p))
+
+    def is_equiv(self, a: Bool, b: Bool) -> bool:
+        assert all(a.context is self for a in (a, b))
+        return self._is_equiv(a._p, b._p)
