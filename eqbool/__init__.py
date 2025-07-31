@@ -57,6 +57,7 @@ class Bool:
     @property
     def term(self) -> typing.Hashable | None:
         assert self.is_term
+        assert self.context is not None
         return self.context._get_term(self._p)
 
     @property
