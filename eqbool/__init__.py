@@ -113,8 +113,7 @@ class Context(_Context):
     def get(self, t: typing.Hashable) -> Bool:
         b = self.__terms.get(t)
         if b is None:
-            b = self._make(self._get(t))
-            self.__terms[t] = b
+            b = self.__terms[t] = self._make(self._get(t))
 
         return b
 
