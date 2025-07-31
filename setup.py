@@ -25,7 +25,7 @@ eqbool_module = Extension(
     name='eqbool._eqbool',
     extra_compile_args=['-std=c++11', '-Wall', '-fno-exceptions', '-fno-rtti',
                         '-O3',
-                        '-UNDEBUG',  # TODO
+                        '-DNDEBUG',
                         '-DNBUILD', '-DQUIET',
                         ],
     sources=[
