@@ -62,10 +62,10 @@ class Bool:
 
     @property
     def args(self) -> list['Bool']:
-        assert 0
         assert self.kind not in ('false', 'true', 'not', 'term')
         assert self.context is not None
-        return [self.context._make(a) for a in self._get_args()]
+        return [self.context._make(a)
+                for a in self.context._get_args(self._p)]
 
     def __repr__(self) -> str:
         v = self.kind
