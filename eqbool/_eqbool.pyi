@@ -14,9 +14,6 @@ class _Context:
     def _get_args(self, v: int) -> list[int]:
         ...
 
-    def _invert(self, v: int) -> int:
-        ...
-
     def _print(self, v: int) -> str:
         ...
 

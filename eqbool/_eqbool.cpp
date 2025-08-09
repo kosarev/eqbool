@@ -65,7 +65,6 @@ static PyObject *bool_get_id(PyObject *self, PyObject *p);
 static PyObject *bool_get_kind(PyObject *self, PyObject *p);
 static PyObject *bool_get_term(PyObject *self, PyObject *p);
 static PyObject *bool_get_args(PyObject *self, PyObject *p);
-static PyObject *bool_invert(PyObject *self, PyObject *p);
 static PyObject *bool_print(PyObject *self, PyObject *p);
 
 static PyObject *context_get(PyObject *self, PyObject *arg);
@@ -79,7 +78,6 @@ static PyMethodDef context_methods[] = {
     {"_get_kind", bool_get_kind, METH_O, nullptr},
     {"_get_term", bool_get_term, METH_O, nullptr},
     {"_get_args", bool_get_args, METH_O, nullptr},
-    {"_invert", bool_invert, METH_O, nullptr},
     {"_print", bool_print, METH_O, nullptr},
 
     {"_get", context_get, METH_O, nullptr},
@@ -235,10 +233,6 @@ static PyObject *bool_get_args(PyObject *Py_UNUSED(self), PyObject *p) {
     }
 
     return list;
-}
-
-static PyObject *bool_invert(PyObject *Py_UNUSED(self), PyObject *p) {
-    return pyobject_from_eqbool(~eqbool_from_pyobject(p));
 }
 
 static PyObject *bool_print(PyObject *Py_UNUSED(self), PyObject *p) {

@@ -79,7 +79,7 @@ class Bool:
 
     def __invert__(self) -> 'Bool':
         assert self.context is not None
-        return self.context._make(self.context._invert(self._p))
+        return self.context._make(self._p ^ 1)
 
     def __or__(self, other: 'Bool') -> 'Bool':
         assert self.context is not None
