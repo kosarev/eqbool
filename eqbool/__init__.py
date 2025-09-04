@@ -24,8 +24,6 @@ class Bool:
     __slots__ = '_p', 'value', '_inversion', 'context'
 
     def __init__(self) -> None:
-        self.value = None
-        self._inversion = None
         self.context = None
 
     @property
@@ -112,9 +110,11 @@ class Context(_Context):
         if b is None:
             b = self.__nodes[p] = self.__t()
             b._p = p
+            b.value = None
             id = self._get_id(p)
             if id in (0, 1):
                 b.value = bool(id)
+            b._inversion = None
             b.context = self
 
         return b
