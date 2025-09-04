@@ -185,6 +185,35 @@ class Context(_Context):
 
     def ifelse(self, i: Bool, t: Bool, e: Bool) -> Bool:
         assert all(a.context is self for a in (i, t, e))
+
+        # Calls are expensive in Python, so do the simplest reductions
+        # right away.
+        if i.value is not None:
+            return t if i.value else e
+        if t.value is not None:
+            return (i | e) if t.value else (~i & e)
+        if e.value is not None:
+            return (~i | t) if e.value else (i & t)
+
+        if t is e:
+            # i ? t : t
+            return t
+        if t is e._inversion:
+            # TODO: Is this really a simplification?
+            #       ifelse(cond, a, ~a) is just the same set of
+            #       clauses as eq(cond, a).
+            # cond ? a : ~a
+            return self.get_eq(i, t)
+
+        if i is t or i is e._inversion:
+            #  a ? a : b
+            # ~b ? a : b
+            return t | e
+        if i is e or i is t._inversion:
+            #  b ? a : b
+            # ~a ? a : b
+            return t & e
+
         return self._make(self._ifelse(i._p, t._p, e._p))
 
     def is_equiv(self, a: Bool, b: Bool) -> bool:
