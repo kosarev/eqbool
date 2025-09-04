@@ -145,7 +145,8 @@ class Context(_Context):
         return self._make(self._get_or(*(a._p for a in args)))
 
     def get_and(self, *args: Bool) -> Bool:
-        return self.get_inversion(self.get_or(*(self.get_inversion(a) for a in args)))
+        assert all(a.context is self for a in args)
+        return self._make(self._get_or(*(a._p ^ 1 for a in args)) ^ 1)
 
     def get_eq(self, a: Bool, b: Bool) -> Bool:
         assert all(a.context is self for a in (a, b))
