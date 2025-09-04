@@ -17,12 +17,14 @@ import typing
 
 class Bool:
     _p: int
+    value: typing.Union[None, bool]
     _inversion: typing.Union[None, 'Bool']
     context: typing.Union[None, 'Context']
 
-    __slots__ = '_p', '_inversion', 'context'
+    __slots__ = '_p', 'value', '_inversion', 'context'
 
     def __init__(self) -> None:
+        self.value = None
         self._inversion = None
         self.context = None
 
@@ -109,8 +111,11 @@ class Context(_Context):
         b = self.__nodes.get(p)
         if b is None:
             b = self.__nodes[p] = self.__t()
-            b.context = self
             b._p = p
+            id = self._get_id(p)
+            if id in (0, 1):
+                b.value = bool(id)
+            b.context = self
 
         return b
 
