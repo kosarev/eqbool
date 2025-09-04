@@ -104,6 +104,7 @@ class Context(_Context):
         self.__t = bool_type
         self.__terms: dict[typing.Hashable, Bool] = {}
         self.__nodes: dict[int, Bool] = {}
+        self.false, self.true = self.get(False), self.get(True)
 
     def _make(self, p: int) -> Bool:
         b = self.__nodes.get(p)
@@ -126,14 +127,6 @@ class Context(_Context):
 
         return b
 
-    @property
-    def false(self) -> Bool:
-        return self.get(False)
-
-    @property
-    def true(self) -> Bool:
-        return self.get(True)
-
     def get_inversion(self, arg: Bool) -> Bool:
         if arg._inversion is None:
             arg._inversion = self._make(arg._p ^ 1)
@@ -142,11 +135,49 @@ class Context(_Context):
 
     def get_or(self, *args: Bool) -> Bool:
         assert all(a.context is self for a in args)
+
+        # Calls are expensive in Python, so do the simplest reductions
+        # right away.
+        unique_args = []
+        for a in args:
+            if a.value is not None:
+                if a.value is False:
+                    continue
+                return self.true
+            if a._inversion in unique_args:
+                return self.true
+            if a not in unique_args:
+                unique_args.append(a)
+
+        if len(unique_args) == 0:
+            return self.false
+        if len(unique_args) == 1:
+            return unique_args[0]
+
         return self._make(self._get_or(*(a._p for a in args)))
 
     def get_and(self, *args: Bool) -> Bool:
         assert all(a.context is self for a in args)
-        return self._make(self._get_or(*(a._p ^ 1 for a in args)) ^ 1)
+
+        # Calls are expensive in Python, so do the simplest reductions
+        # right away.
+        unique_args = []
+        for a in args:
+            if a.value is not None:
+                if a.value is True:
+                    continue
+                return self.false
+            if a._inversion in unique_args:
+                return self.false
+            if a not in unique_args:
+                unique_args.append(a)
+
+        if len(unique_args) == 0:
+            return self.true
+        if len(unique_args) == 1:
+            return unique_args[0]
+
+        return self._make(self._get_or(*(a._p ^ 1 for a in unique_args)) ^ 1)
 
     def get_eq(self, a: Bool, b: Bool) -> Bool:
         assert all(a.context is self for a in (a, b))
