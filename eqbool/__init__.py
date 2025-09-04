@@ -17,11 +17,13 @@ import typing
 
 class Bool:
     _p: int
+    _inversion: typing.Union[None, 'Bool']
     context: typing.Union[None, 'Context']
 
-    __slots__ = '_p', 'context'
+    __slots__ = '_p', '_inversion', 'context'
 
     def __init__(self) -> None:
+        self._inversion = None
         self.context = None
 
     @property
@@ -79,7 +81,7 @@ class Bool:
 
     def __invert__(self) -> 'Bool':
         assert self.context is not None
-        return self.context._make(self._p ^ 1)
+        return self.context.get_inversion(self)
 
     def __or__(self, other: 'Bool') -> 'Bool':
         assert self.context is not None
@@ -89,10 +91,12 @@ class Bool:
         assert self.context is not None
         return self.context.get_and(self, other)
 
+    ''' TODO
     def __eq__(self, other: object) -> bool:
         assert isinstance(other, Bool)
         assert other.context is self.context
         return self.id == other.id
+    '''
 
 
 class Context(_Context):
@@ -125,12 +129,18 @@ class Context(_Context):
     def true(self) -> Bool:
         return self.get(True)
 
+    def get_inversion(self, arg: Bool) -> Bool:
+        if arg._inversion is None:
+            arg._inversion = self._make(arg._p ^ 1)
+            arg._inversion._inversion = arg
+        return arg._inversion
+
     def get_or(self, *args: Bool) -> Bool:
         assert all(a.context is self for a in args)
         return self._make(self._get_or(*(a._p for a in args)))
 
     def get_and(self, *args: Bool) -> Bool:
-        return ~self.get_or(*(~a for a in args))
+        return self.get_inversion(self.get_or(*(self.get_inversion(a) for a in args)))
 
     def get_eq(self, a: Bool, b: Bool) -> Bool:
         assert all(a.context is self for a in (a, b))
