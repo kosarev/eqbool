@@ -17,11 +17,11 @@ import typing
 
 class Bool:
     _p: int
-    value: typing.Union[None, bool]
+    _value: typing.Union[None, bool]
     _inversion: typing.Union[None, 'Bool']
     context: typing.Union[None, 'Context']
 
-    __slots__ = '_p', 'value', '_inversion', 'context'
+    __slots__ = '_p', '_value', '_inversion', 'context'
 
     def __init__(self) -> None:
         self.context = None
@@ -111,10 +111,10 @@ class Context(_Context):
         if b is None:
             b = self.__nodes[p] = self.__t()
             b._p = p
-            b.value = None
+            b._value = None
             id = self._get_id(p)
             if id in (0, 1):
-                b.value = bool(id)
+                b._value = bool(id)
             b._inversion = None
             b.context = self
 
@@ -140,8 +140,8 @@ class Context(_Context):
         # right away.
         unique_args = []
         for a in args:
-            if a.value is not None:
-                if a.value is False:
+            if a._value is not None:
+                if a._value is False:
                     continue
                 return self.true
             if a._inversion in unique_args:
@@ -163,8 +163,8 @@ class Context(_Context):
         # right away.
         unique_args = []
         for a in args:
-            if a.value is not None:
-                if a.value is True:
+            if a._value is not None:
+                if a._value is True:
                     continue
                 return self.false
             if a._inversion in unique_args:
@@ -188,12 +188,12 @@ class Context(_Context):
 
         # Calls are expensive in Python, so do the simplest reductions
         # right away.
-        if i.value is not None:
-            return t if i.value else e
-        if t.value is not None:
-            return (i | e) if t.value else (~i & e)
-        if e.value is not None:
-            return (~i | t) if e.value else (i & t)
+        if i._value is not None:
+            return t if i._value else e
+        if t._value is not None:
+            return (i | e) if t._value else (~i & e)
+        if e._value is not None:
+            return (~i | t) if e._value else (i & t)
 
         if t is e:
             # i ? t : t
