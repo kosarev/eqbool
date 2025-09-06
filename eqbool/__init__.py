@@ -91,6 +91,10 @@ class Bool:
         assert self.context is not None
         return self.context.get_and(self, other)
 
+    def __xor__(self, other: 'Bool') -> 'Bool':
+        assert self.context is not None
+        return self.context.get_neq(self, other)
+
     ''' TODO
     def __eq__(self, other: object) -> bool:
         assert isinstance(other, Bool)
@@ -182,6 +186,9 @@ class Context(_Context):
     def get_eq(self, a: Bool, b: Bool) -> Bool:
         assert all(a.context is self for a in (a, b))
         return self._make(self._get_eq(a._p, b._p))
+
+    def get_neq(self, a: Bool, b: Bool) -> Bool:
+        return ~self.get_eq(a, b)
 
     def ifelse(self, i: Bool, t: Bool, e: Bool) -> Bool:
         assert all(a.context is self for a in (i, t, e))
