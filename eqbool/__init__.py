@@ -108,8 +108,7 @@ class Bool:
 
 
 class Context(_Context):
-    def __init__(self, bool_type: typing.Type[Bool] = Bool) -> None:
-        self.__t = bool_type
+    def __init__(self) -> None:
         self.__terms: dict[typing.Hashable, Bool] = {}
         self.__nodes: dict[int, Bool] = {}
         self.false, self.true = self.get(False), self.get(True)
@@ -117,7 +116,7 @@ class Context(_Context):
     def _make(self, p: int) -> Bool:
         b = self.__nodes.get(p)
         if b is None:
-            b = self.__nodes[p] = self.__t()
+            b = self.__nodes[p] = Bool()
             b._p = p
             b._value = None
             id = self._get_id(p)
