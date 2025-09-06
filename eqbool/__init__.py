@@ -95,6 +95,10 @@ class Bool:
         assert self.context is not None
         return self.context.get_neq(self, other)
 
+    def ifelse(self, t: 'Bool', e: 'Bool') -> 'Bool':
+        assert self.context is not None
+        return self.context.ifelse(self, t, e)
+
     ''' TODO
     def __eq__(self, other: object) -> bool:
         assert isinstance(other, Bool)
