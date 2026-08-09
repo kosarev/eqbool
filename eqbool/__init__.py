@@ -34,6 +34,15 @@ class Bool:
         return self.context._get_id(self._p)
 
     @property
+    def fp(self) -> int:
+        # The fingerprint: the values the expression takes under
+        # 64 fixed pseudo-random assignments of the terms, one
+        # per bit. Equivalent expressions always have equal
+        # fingerprints.
+        assert self.context is not None
+        return self.context._get_fp(self._p)
+
+    @property
     def kind(self) -> str:
         assert self.context is not None
         return self.context._get_kind(self._p)

@@ -62,6 +62,7 @@ struct context_object {
 };
 
 static PyObject *bool_get_id(PyObject *self, PyObject *p);
+static PyObject *bool_get_fp(PyObject *self, PyObject *p);
 static PyObject *bool_get_kind(PyObject *self, PyObject *p);
 static PyObject *bool_get_term(PyObject *self, PyObject *p);
 static PyObject *bool_get_args(PyObject *self, PyObject *p);
@@ -75,6 +76,7 @@ static PyObject *context_is_equiv(PyObject *self, PyObject *args);
 
 static PyMethodDef context_methods[] = {
     {"_get_id", bool_get_id, METH_O, nullptr},
+    {"_get_fp", bool_get_fp, METH_O, nullptr},
     {"_get_kind", bool_get_kind, METH_O, nullptr},
     {"_get_term", bool_get_term, METH_O, nullptr},
     {"_get_args", bool_get_args, METH_O, nullptr},
@@ -285,6 +287,10 @@ static PyModuleDef module = {
 
 static PyObject *bool_get_id(PyObject *Py_UNUSED(self), PyObject *p) {
     return PyLong_FromSize_t(eqbool_from_pyobject(p).get_id());
+}
+
+static PyObject *bool_get_fp(PyObject *Py_UNUSED(self), PyObject *p) {
+    return PyLong_FromUnsignedLongLong(eqbool_from_pyobject(p).get_fp());
 }
 
 static const char *get_kind_name(eqbool::node_kind kind) {

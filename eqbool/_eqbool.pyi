@@ -5,6 +5,9 @@ class _Context:
     def _get_id(self, v: int) -> int:
         ...
 
+    def _get_fp(self, v: int) -> int:
+        ...
+
     def _get_kind(self, v: int) -> str:
         ...
 
