@@ -22,6 +22,7 @@ eqbool uses the [CaDiCaL](https://github.com/arminbiere/cadical) solver.
 int main() {
     eqbool::term_set<std::string> terms;
     eqbool::eqbool_context eqbools(terms);
+    eqbool::order_context orders(eqbools);
     using eqbool::eqbool;
 
     eqbool eqfalse = eqbools.get_false();
@@ -59,6 +60,28 @@ int main() {
     e1.propagate();
     e2.propagate();
     assert(e1 == e2);
+
+    // Order terms are ordinary terms stating that one of two
+    // given values comes before the other; the opposite order
+    // is the negation of the same term.
+    eqbool a_b = eqbools.get(terms.add("a<b"));
+    eqbool b_c = eqbools.get(terms.add("b<c"));
+    eqbool a_c = eqbools.get(terms.add("a<c"));
+    orders.register_order(a_b, terms.add("a"), terms.add("b"));
+    orders.register_order(b_c, terms.add("b"), terms.add("c"));
+    orders.register_order(a_c, terms.add("a"), terms.add("c"));
+
+    // Orderings whose terms chain into a cycle are impossible.
+    assert(orders.is_never(a_b & b_c & ~a_c));
+    assert(orders.is_possible(a_b & b_c));
+
+    // Under consistent orders, spelling out the ordering
+    // implied by transitivity changes nothing...
+    assert(orders.is_equiv(a_b & b_c, a_b & b_c & a_c));
+
+    // ...but as plain propositions the two expressions differ,
+    // and the order context never confuses the two views.
+    assert(!eqbools.is_equiv(a_b & b_c, a_b & b_c & a_c));
 }
 ```
 [example.cpp](https://github.com/kosarev/eqbool/blob/master/example.cpp)
