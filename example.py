@@ -3,7 +3,7 @@
 # Testing boolean expressions for equivalence.
 # https://github.com/kosarev/eqbool
 #
-# Copyright (C) 2023-2025 Ivan Kosarev.
+# Copyright (C) 2023-2026 Ivan Kosarev.
 # mail@ivankosarev.com
 #
 # Published under the MIT license.
@@ -39,7 +39,10 @@ def main():
 
     assert ctx.is_equiv(e1, e2)
 
-    assert e1 == e2
+    # Bool objects compare by identity, for speed; established
+    # equivalences are followed by the underlying node ids.
+    assert e1 != e2
+    assert e1.id == e2.id
 
 
 if __name__ == "__main__":

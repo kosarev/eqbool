@@ -128,6 +128,9 @@ def main():
 
     assert ctx.is_equiv(e1, e2)
 
-    assert e1 == e2
+    # Bool objects compare by identity, for speed; established
+    # equivalences are followed by the underlying node ids.
+    assert e1 != e2
+    assert e1.id == e2.id
 ```
 [example.py](https://github.com/kosarev/eqbool/blob/master/example.py)
