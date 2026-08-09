@@ -162,7 +162,8 @@ static PyTypeObject context_type_object = {
     0,                          // tp_version_tag
     nullptr,                    // tp_finalize
     nullptr,                    // tp_vectorcall
-    0,                          // tp_watched
+    // Later fields, such as tp_watched, do not exist in all
+    // supported Python versions and are left value-initialised.
 };
 
 struct order_context_object {
@@ -265,7 +266,8 @@ static PyTypeObject order_context_type_object = {
     0,                          // tp_version_tag
     nullptr,                    // tp_finalize
     nullptr,                    // tp_vectorcall
-    0,                          // tp_watched
+    // Later fields, such as tp_watched, do not exist in all
+    // supported Python versions and are left value-initialised.
 };
 
 static PyModuleDef module = {
