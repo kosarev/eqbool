@@ -1,4 +1,11 @@
 # eqbool
+
+[![Python package CI](https://github.com/kosarev/eqbool/actions/workflows/python-package.yml/badge.svg)](https://github.com/kosarev/eqbool/actions/workflows/python-package.yml)
+[![C/C++ CI](https://github.com/kosarev/eqbool/actions/workflows/c-cpp.yml/badge.svg)](https://github.com/kosarev/eqbool/actions/workflows/c-cpp.yml)
+[![PyPI](https://img.shields.io/pypi/v/eqbool)](https://pypi.org/project/eqbool/)
+[![Python](https://img.shields.io/pypi/pyversions/eqbool)](https://pypi.org/project/eqbool/)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue)](https://github.com/kosarev/eqbool/blob/main/LICENSE)
+
 Testing boolean expressions for equivalence.
 
 eqbool is a C++ and Python rewrite of code originally developed as part
