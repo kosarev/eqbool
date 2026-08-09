@@ -1,0 +1,5 @@
+# Everything an sdist needs to build the extension: our header and
+# the bundled CaDiCaL sources, headers and licence.
+include eqbool.h
+recursive-include cadical/src *.hpp *.h
+include cadical/LICENSE
