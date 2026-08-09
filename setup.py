@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 
 #   Testing boolean expressions for equivalence.
 #   https://github.com/kosarev/eqbool
@@ -12,8 +11,8 @@
 
 import os
 import platform
-from setuptools import Extension, setup
 
+from setuptools import Extension, setup
 
 here = os.path.abspath(os.path.dirname(__file__))
 

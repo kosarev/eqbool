@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 #   Testing boolean expressions for equivalence.
 #   https://github.com/kosarev/eqbool
 #
@@ -9,19 +7,19 @@
 #   Published under the MIT license.
 
 
+import typing
+
 from ._eqbool import _Context, _OrderContext
 from ._main import main as main
-
-import typing
 
 
 class Bool:
     _p: int
-    _value: typing.Union[None, bool]
+    _value: None | bool
     _inversion: typing.Union[None, 'Bool']
     context: typing.Union[None, 'Context']
 
-    __slots__ = '_p', '_value', '_inversion', 'context'
+    __slots__ = '_inversion', '_p', '_value', 'context'
 
     def __init__(self) -> None:
         self.context = None
