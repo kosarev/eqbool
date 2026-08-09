@@ -10,7 +10,7 @@
 
 
 from ._eqbool import _Context, _OrderContext
-from ._main import main
+from ._main import main as main
 
 import typing
 

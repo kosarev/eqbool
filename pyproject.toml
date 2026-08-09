@@ -29,3 +29,7 @@ classifiers=[
 
 [project.scripts]
 eqbool = 'eqbool:main'
+
+[tool.ruff]
+# The bundled CaDiCaL tree and build outputs are not ours to lint.
+extend-exclude = ['cadical', 'dist']
