@@ -14,6 +14,9 @@ diversity of [SAT](https://en.wikipedia.org/wiki/Boolean_satisfiability_problem)
 
 Where equivalence cannot be trivially established via simplifications,
 eqbool uses the [CaDiCaL](https://github.com/arminbiere/cadical) solver.
+As the workload is very many small solves rather than a few hard ones,
+the bundled CaDiCaL version is chosen by measuring on traces of real
+runs, and is not necessarily the latest release.
 
 
 ```c++
