@@ -34,7 +34,7 @@ jobs:
       run: pip install .
 
     - name: Run the example
-      run: python example.py
+      run: python -I example.py
 
   build-sdist:
     needs: test
