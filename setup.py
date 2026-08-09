@@ -27,6 +27,10 @@ else:
                  '-O3',
                  '-DNDEBUG',
                  '-DNBUILD', '-DQUIET',
+                 # Do not rely on closefrom(), which older libcs,
+                 # as in manylinux images, do not have; CaDiCaL
+                 # provides its own replacement.
+                 '-DNCLOSEFROM',
                  ]
 
 eqbool_module = Extension(
