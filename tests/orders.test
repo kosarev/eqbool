@@ -1,0 +1,37 @@
+
+def X
+
+def_order A_B a b
+def_order B_C b c
+def_order C_D c d
+def_order A_C a c
+def_order A_D a d
+
+# The reversed ordering is the negation of the same order term.
+assert_never (and A_B ~A_B)
+assert_possible ~A_B
+
+# Orderings whose terms chain into a cycle are impossible.
+assert_never (and A_B (and B_C ~A_C))
+assert_never (and ~A_B (and ~B_C A_C))
+assert_possible (and A_B (and B_C A_C))
+assert_possible (and A_B B_C)
+
+# Longer cycles are found and forbidden too.
+assert_never (and A_B (and B_C (and C_D ~A_D)))
+assert_possible (and A_B (and B_C C_D))
+
+# Terms not registered as order terms are unconstrained.
+assert_possible (and X (and A_B B_C))
+assert_never (and X (and (not X) A_B))
+
+# The same condition spelled with and without the ordering
+# implied by transitivity.
+assert_never (not (eq (and A_B B_C) (and A_B (and B_C A_C))))
+
+# ...which is never recorded as a propositional equivalence in
+# the underlying context.
+assert_sat_unequiv (and A_B B_C) (and A_B (and B_C A_C))
+
+# Verdicts are memoised; asking again is fine.
+assert_never (and A_B (and B_C ~A_C))

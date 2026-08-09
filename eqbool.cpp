@@ -2,7 +2,7 @@
 /*  Testing boolean expressions for equivalence.
     https://github.com/kosarev/eqbool
 
-    Copyright (C) 2023-2025 Ivan Kosarev.
+    Copyright (C) 2023-2026 Ivan Kosarev.
     mail@ivankosarev.com
 
     Published under the MIT license.
@@ -477,18 +477,14 @@ int eqbool_context::skip_not(eqbool &e,
     return get_literal(&e.get_def(), literals);
 }
 
-bool eqbool_context::is_unsat(eqbool e) {
-    if(e.is_const())
-        return e.is_false();
+class eqbool_context::sat_solver : public CaDiCaL::Solver {};
 
-    auto *solver = new CaDiCaL::Solver;
-
-    {
+void eqbool_context::add_solver_clauses(sat_solver &solver, eqbool e,
+        std::unordered_map<const node_def*, int> &literals) {
     timer t(stats.clauses_time);
 
-    std::unordered_map<const node_def*, int> literals;
-    solver->add(skip_not(e, literals));
-    solver->add(0);
+    solver.add(skip_not(e, literals));
+    solver.add(0);
     ++stats.num_clauses;
 
     std::vector<eqbool> worklist({e});
@@ -512,9 +508,9 @@ bool eqbool_context::is_unsat(eqbool e) {
             std::vector<int> arg_lits;
             for(eqbool a : def.args) {
                 int a_lit = skip_not(a, literals);
-                solver->add(-a_lit);
-                solver->add(r_lit);
-                solver->add(0);
+                solver.add(-a_lit);
+                solver.add(r_lit);
+                solver.add(0);
                 ++stats.num_clauses;
 
                 arg_lits.push_back(a_lit);
@@ -522,9 +518,9 @@ bool eqbool_context::is_unsat(eqbool e) {
             }
 
             for(int a_lit : arg_lits)
-                solver->add(a_lit);
-            solver->add(-r_lit);
-            solver->add(0);
+                solver.add(a_lit);
+            solver.add(-r_lit);
+            solver.add(0);
             ++stats.num_clauses;
             continue; }
         case node_kind::ifelse:
@@ -536,28 +532,28 @@ bool eqbool_context::is_unsat(eqbool e) {
             int t_lit = skip_not(t_arg, literals);
             int e_lit = skip_not(e_arg, literals);
 
-            solver->add(-i_lit);
-            solver->add(t_lit);
-            solver->add(-r_lit);
-            solver->add(0);
+            solver.add(-i_lit);
+            solver.add(t_lit);
+            solver.add(-r_lit);
+            solver.add(0);
             ++stats.num_clauses;
 
-            solver->add(-i_lit);
-            solver->add(-t_lit);
-            solver->add(r_lit);
-            solver->add(0);
+            solver.add(-i_lit);
+            solver.add(-t_lit);
+            solver.add(r_lit);
+            solver.add(0);
             ++stats.num_clauses;
 
-            solver->add(i_lit);
-            solver->add(e_lit);
-            solver->add(-r_lit);
-            solver->add(0);
+            solver.add(i_lit);
+            solver.add(e_lit);
+            solver.add(-r_lit);
+            solver.add(0);
             ++stats.num_clauses;
 
-            solver->add(i_lit);
-            solver->add(-e_lit);
-            solver->add(r_lit);
-            solver->add(0);
+            solver.add(i_lit);
+            solver.add(-e_lit);
+            solver.add(r_lit);
+            solver.add(0);
             ++stats.num_clauses;
 
             worklist.push_back(i_arg);
@@ -567,7 +563,16 @@ bool eqbool_context::is_unsat(eqbool e) {
         }
         unreachable("unknown node kind");
     }
-    }
+}
+
+bool eqbool_context::is_unsat(eqbool e) {
+    if(e.is_const())
+        return e.is_false();
+
+    auto *solver = new sat_solver;
+
+    std::unordered_map<const node_def*, int> literals;
+    add_solver_clauses(*solver, e, literals);
 
     bool unsat;
     {
@@ -771,6 +776,146 @@ std::ostream &eqbool_context::dump(std::ostream &s, args_ref nodes) const {
     }
 
     return s;
+}
+
+void order_context::register_order(eqbool term, uintptr_t before,
+                                   uintptr_t after) {
+    assert(before != after);
+
+    term.propagate();
+    if(term.is_inversion()) {
+        std::swap(before, after);
+        term = ~term;
+    }
+    assert(term.get_kind() == node_kind::term);
+
+    auto r = order_terms.insert({term.get_term(), {before, after}});
+    assert(r.second || (r.first->second.before == before &&
+                        r.first->second.after == after));
+    unused(&r);
+}
+
+bool order_context::is_never_impl(eqbool e) {
+    auto *solver = new eqbool_context::sat_solver;
+
+    std::unordered_map<const detail::node_def*, int> literals;
+    eqbools.add_solver_clauses(*solver, e, literals);
+
+    bool never = false;
+    for(;;) {
+        int res;
+        {
+            timer t(eqbools.stats.sat_time);
+            res = solver->solve();
+        }
+        ++eqbools.stats.num_sat_solutions;
+
+        if(res == 20) {
+            // No orders satisfy the expression, consistent or
+            // not.
+            never = true;
+            break;
+        }
+        assert(res == 10);
+
+        // The ordering the model implies: an order term
+        // assigned true orders (before, after); assigned false,
+        // the reverse.
+        struct edge {
+            uintptr_t to;
+            int lit;  // the literal as assigned
+        };
+        std::unordered_map<uintptr_t, std::vector<edge>> edges;
+        for(const auto &p : literals) {
+            const detail::node_def &def = *p.first;
+            if(def.kind != node_kind::term)
+                continue;
+            auto it = order_terms.find(def.term);
+            if(it == order_terms.end())
+                continue;
+            const sides &s = it->second;
+            if(solver->val(p.second) > 0)
+                edges[s.before].push_back({s.after, p.second});
+            else
+                edges[s.after].push_back({s.before, -p.second});
+        }
+
+        // Find a cycle, if any. Sides are white (unvisited),
+        // grey (on the path) or black (done).
+        struct frame {
+            uintptr_t side;
+            std::size_t next;
+            int enter_lit;  // 0 for the root
+        };
+        std::vector<int> cycle_lits;
+        std::unordered_map<uintptr_t, int> colours;
+        for(const auto &p : edges) {
+            if(colours[p.first] != 0)
+                continue;
+            std::vector<frame> path({{p.first, 0, 0}});
+            colours[p.first] = 1;
+            while(!path.empty() && cycle_lits.empty()) {
+                frame &f = path.back();
+                auto it = edges.find(f.side);
+                if(it == edges.end() || f.next >= it->second.size()) {
+                    colours[f.side] = 2;
+                    path.pop_back();
+                    continue;
+                }
+                const edge &g = it->second[f.next++];
+                int colour = colours[g.to];
+                if(colour == 2)
+                    continue;
+                if(colour == 1) {
+                    // The cycle: the edges entering the sides
+                    // on the path after g.to, plus this closing
+                    // edge.
+                    std::size_t i = path.size();
+                    while(path[i - 1].side != g.to)
+                        --i;
+                    for(std::size_t j = i; j != path.size(); ++j)
+                        cycle_lits.push_back(path[j].enter_lit);
+                    cycle_lits.push_back(g.lit);
+                    break;
+                }
+                colours[g.to] = 1;
+                path.push_back({g.to, 0, g.lit});
+            }
+            if(!cycle_lits.empty())
+                break;
+        }
+
+        if(cycle_lits.empty()) {
+            // A consistent order satisfies the expression.
+            break;
+        }
+
+        // Forbid this cycle and try again.
+        for(int lit : cycle_lits)
+            solver->add(-lit);
+        solver->add(0);
+        ++eqbools.stats.num_clauses;
+    }
+
+    delete solver;
+
+    return never;
+}
+
+bool order_context::is_never(eqbool e) {
+    if(e.is_const())
+        return e.is_false();
+
+    e.propagate();
+
+    std::size_t key = e.get_id();
+    auto it = is_never_cache.find(key);
+    if(it != is_never_cache.end())
+        return it->second;
+
+    bool never = is_never_impl(e);
+    is_never_cache[key] = never;
+    return never;
 }
 
 }  // namesapce eqbool

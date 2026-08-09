@@ -2,7 +2,7 @@
 /*  Testing boolean expressions for equivalence.
     https://github.com/kosarev/eqbool
 
-    Copyright (C) 2023-2025 Ivan Kosarev.
+    Copyright (C) 2023-2026 Ivan Kosarev.
     mail@ivankosarev.com
 
     Published under the MIT license.
@@ -21,6 +21,7 @@
 namespace {
 
 using eqbool::eqbool_context;
+using eqbool::order_context;
 using eqbool::term_set;
 using eqbool::eqbool;
 
@@ -33,6 +34,7 @@ class test_context {
 private:
     term_set<std::string> terms;
     eqbool_context eqbools{terms};
+    order_context orders{eqbools};
     std::unordered_map<std::string, eqbool> nodes;
 
     std::string filepath;
@@ -152,6 +154,34 @@ private:
             if(n)
                 fatal("result is already defined");
             n = e;
+            return;
+        }
+
+        if(op == "def_order") {
+            std::string r, a, b;
+            if(!(s >> r >> a >> b))
+                fatal("result node and two sides expected");
+            if(s.peek() != std::istream::traits_type::eof())
+                fatal("unexpected arguments");
+            eqbool &n = nodes[r];
+            if(n)
+                fatal("result is already defined");
+            n = eqbools.get(terms.add(r));
+            orders.register_order(n, terms.add(a), terms.add(b));
+            return;
+        }
+
+        if(op == "assert_never" || op == "assert_possible") {
+            eqbool a = parse_expr(s);
+            if(!a)
+                fatal("argument expected");
+            if(s.peek() != std::istream::traits_type::eof())
+                fatal("unexpected arguments");
+            if(orders.is_never(a) != (op == "assert_never")) {
+                fatal(std::ostringstream() <<
+                          "order possibility check failed\n"
+                          "a: " << a);
+            }
             return;
         }
 

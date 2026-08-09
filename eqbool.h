@@ -2,7 +2,7 @@
 /*  Testing boolean expressions for equivalence.
     https://github.com/kosarev/eqbool
 
-    Copyright (C) 2023-2025 Ivan Kosarev.
+    Copyright (C) 2023-2026 Ivan Kosarev.
     mail@ivankosarev.com
 
     Published under the MIT license.
@@ -25,6 +25,7 @@ namespace eqbool {
 class args_ref;
 class eqbool;
 class eqbool_context;
+class order_context;
 
 static inline void unused(...) {}
 
@@ -320,6 +321,12 @@ private:
     int skip_not(eqbool &e,
                  std::unordered_map<const node_def*, int> &literals);
 
+    class sat_solver;
+
+    void add_solver_clauses(
+        sat_solver &solver, eqbool e,
+        std::unordered_map<const node_def*, int> &literals);
+
     eqbool get_value(std::vector<eqbool> &eqs, eqbool assumed_false) const;
 
     static void add_eq(std::vector<eqbool> &eqs, eqbool e);
@@ -353,6 +360,7 @@ private:
     std::ostream &dump(std::ostream &s, args_ref nodes) const;
 
     friend eqbool;
+    friend class order_context;
 
 public:
     eqbool_context(const term_set_base &terms) : terms(terms) {}
@@ -413,6 +421,44 @@ inline std::ostream &eqbool::print(std::ostream &s) const {
 inline std::ostream &operator << (std::ostream &s, eqbool e) {
     return e.print(s);
 }
+
+// Reasoning over partial orders. A registered order term is an
+// ordinary term stating that one of two opaque sides comes
+// before the other; the reversed ordering is the negation of
+// the same term. Queries answer whether an expression can hold
+// under any consistent order. Verdicts are never recorded in
+// the underlying context: orders are propositions plus
+// additional constraints, so their equivalences do not hold
+// propositionally.
+class order_context {
+private:
+    struct sides {
+        uintptr_t before, after;
+    };
+
+    eqbool_context &eqbools;
+
+    // Registered order terms, by their term values.
+    std::unordered_map<uintptr_t, sides> order_terms;
+
+    // Memoised is_never() verdicts, keyed by eqbool identity --
+    // get_id(), which includes the inversion.
+    std::unordered_map<std::size_t, bool> is_never_cache;
+
+    bool is_never_impl(eqbool e);
+
+public:
+    order_context(eqbool_context &eqbools) : eqbools(eqbools) {}
+
+    void register_order(eqbool term, uintptr_t before, uintptr_t after);
+
+    bool is_never(eqbool e);
+    bool is_possible(eqbool e) { return !is_never(e); }
+
+    bool is_equiv(eqbool a, eqbool b) {
+        return is_never(~eqbools.get_eq(a, b));
+    }
+};
 
 }  // namespace eqbool
 
