@@ -35,6 +35,35 @@ bool contains(const C &c, const E &e) {
     return std::find(c.begin(), c.end(), e) != c.end();
 }
 
+uint64_t splitmix64(uint64_t x) {
+    x += 0x9e3779b97f4a7c15u;
+    x = (x ^ (x >> 30)) * 0xbf58476d1ce4e5b9u;
+    x = (x ^ (x >> 27)) * 0x94d049bb133111ebu;
+    return x ^ (x >> 31);
+}
+
+uint64_t compute_fp(const node_def &def) {
+    switch(def.kind) {
+    case node_kind::term:
+        // Terms take pseudo-random assignments derived from
+        // their ids, so fingerprints are reproducible between
+        // runs creating nodes in the same order.
+        return splitmix64(def.id);
+    case node_kind::or_node: {
+        uint64_t fp = 0;
+        for(eqbool a : def.args)
+            fp |= a.get_fp();
+        return fp; }
+    case node_kind::ifelse: {
+        uint64_t i = def.args[0].get_fp();
+        return (i & def.args[1].get_fp()) |
+               (~i & def.args[2].get_fp()); }
+    case node_kind::eq:
+        return ~(def.args[0].get_fp() ^ def.args[1].get_fp());
+    }
+    unreachable("unknown node kind");
+}
+
 }
 
 void detail::hasher::flatten_or_impl(std::vector<eqbool> &flattened,
@@ -157,6 +186,7 @@ void eqbool::reduce() {
 
 eqbool eqbool_context::add_def(node_def def) {
     def.id = defs.size();
+    def.fp = compute_fp(def);
     auto r = defs.insert({def, eqbool()});
     auto &i = r.first;
     eqbool &value = i->second;
@@ -569,6 +599,12 @@ bool eqbool_context::is_unsat(eqbool e) {
     if(e.is_const())
         return e.is_false();
 
+    // A non-zero fingerprint names satisfying assignments.
+    if(e.get_fp() != 0) {
+        ++stats.num_fp_rejects;
+        return false;
+    }
+
     auto *solver = new sat_solver;
 
     std::unordered_map<const node_def*, int> literals;
@@ -588,6 +624,8 @@ bool eqbool_context::is_unsat(eqbool e) {
 }
 
 void eqbool_context::store_equiv(eqbool a, eqbool b) {
+    assert(a.get_fp() == b.get_fp());
+
     // Assume that the node created earlier is the simpler one.
     if(a < b)
         std::swap(a, b);
@@ -601,6 +639,13 @@ void eqbool_context::store_equiv(eqbool a, eqbool b) {
 }
 
 bool eqbool_context::is_equiv(eqbool a, eqbool b) {
+    // Differing fingerprints prove inequivalence, sparing not
+    // just the solver query, but constructing an eq node for it.
+    if(a.get_fp() != b.get_fp()) {
+        ++stats.num_fp_rejects;
+        return false;
+    }
+
     eqbool eq = get_eq(a, b);
     if(eq.is_const())
         return eq.is_true();

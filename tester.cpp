@@ -212,13 +212,19 @@ private:
                 bool res = (op == "assert_equiv" || op == "assert_sat_equiv");
                 bool sat = (op == "assert_sat_equiv" || op == "assert_sat_unequiv");
                 unsigned long count = eqbools.get_stats().num_sat_solutions;
+                unsigned long fp_count = eqbools.get_stats().num_fp_rejects;
                 if(eqbools.is_equiv(a, b) != res) {
                     fatal(std::ostringstream() <<
                         "equivalence check failed\n" <<
                         "a: " << a << "\n"
                         "b: " << b);
                 }
-                if(sat && eqbools.get_stats().num_sat_solutions == count)
+                // Fingerprint rejections are semantic verdicts
+                // just as SAT solutions are; what must not
+                // happen is the check getting resolved by
+                // means of simplification.
+                if(sat && eqbools.get_stats().num_sat_solutions == count &&
+                       eqbools.get_stats().num_fp_rejects == fp_count)
                     fatal("equivlance check resolved without using SAT solver");
             }
             return;
@@ -247,6 +253,7 @@ private:
              format(static_cast<long>(stats.sat_time * 1000)) << " ms, " <<
              format(stats.num_clauses) << " clauses " <<
              format(static_cast<long>(stats.clauses_time * 1000)) << " ms, " <<
+             format(stats.num_fp_rejects) << " fp rejects, " <<
              "other " << format(static_cast<long>(other_time * 1000)) << " ms\n";
     }
 

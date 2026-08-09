@@ -97,6 +97,7 @@ struct node_def {
     node_kind kind = node_kind::term;
     uintptr_t term = 0;
     std::vector<eqbool> args;
+    uint64_t fp = 0;
 
     node_def(uintptr_t term, eqbool_context &context)
         : context(&context), term(term) {}
@@ -221,6 +222,18 @@ public:
                is_inversion();
     }
 
+    // The fingerprint: the values the expression takes under 64
+    // fixed pseudo-random assignments of the terms, one per bit.
+    // Equivalent expressions evaluate identically under every
+    // assignment, so differing fingerprints prove inequivalence
+    // without involving the solver.
+    uint64_t get_fp() const {
+        assert(!is_undef());
+        uintptr_t entry = entry_code & detail::entry_code_mask;
+        uint64_t fp = reinterpret_cast<node_entry*>(entry)->first.fp;
+        return is_inversion() ? ~fp : fp;
+    }
+
     uintptr_t as_uintptr() const {
         return entry_code;
     }
@@ -296,6 +309,7 @@ struct eqbool_stats {
     double clauses_time = 0;
     unsigned long num_sat_solutions = 0;
     unsigned long num_clauses = 0;
+    unsigned long num_fp_rejects = 0;
 };
 
 class eqbool_context {
