@@ -11,6 +11,7 @@
 
 
 import os
+import platform
 from setuptools import Extension, setup
 
 
@@ -20,13 +21,18 @@ with open(os.path.join(here, 'README.md'), encoding='utf-8') as f:
     long_description = f.read()
 
 
+if platform.system() == 'Windows':
+    cxx_flags = ['/DNDEBUG', '/DNBUILD', '/DQUIET']
+else:
+    cxx_flags = ['-std=c++11', '-Wall', '-fno-exceptions', '-fno-rtti',
+                 '-O3',
+                 '-DNDEBUG',
+                 '-DNBUILD', '-DQUIET',
+                 ]
+
 eqbool_module = Extension(
     name='eqbool._eqbool',
-    extra_compile_args=['-std=c++11', '-Wall', '-fno-exceptions', '-fno-rtti',
-                        '-O3',
-                        '-DNDEBUG',
-                        '-DNBUILD', '-DQUIET',
-                        ],
+    extra_compile_args=cxx_flags,
     sources=[
         'eqbool/_eqbool.cpp',
         'eqbool.cpp',
