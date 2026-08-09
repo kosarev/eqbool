@@ -31,3 +31,15 @@ class _Context:
 
     def _is_equiv(self, a: int, b: int) -> bool:
         ...
+
+
+class _OrderContext:
+    def __init__(self, context: _Context) -> None:
+        ...
+
+    def _register_order(self, term: int, before: typing.Hashable,
+                        after: typing.Hashable) -> None:
+        ...
+
+    def _is_never(self, e: int) -> bool:
+        ...

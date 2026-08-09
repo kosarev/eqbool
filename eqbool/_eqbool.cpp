@@ -2,7 +2,7 @@
 /*  Testing boolean expressions for equivalence.
     https://github.com/kosarev/eqbool
 
-    Copyright (C) 2023-2025 Ivan Kosarev.
+    Copyright (C) 2023-2026 Ivan Kosarev.
     mail@ivankosarev.com
 
     Published under the MIT license.
@@ -151,6 +151,109 @@ static PyTypeObject context_type_object = {
     nullptr,                    // tp_init
     nullptr,                    // tp_alloc
     context_new,                // tp_new
+    nullptr,                    // tp_free
+    nullptr,                    // tp_is_gc
+    nullptr,                    // tp_bases
+    nullptr,                    // tp_mro
+    nullptr,                    // tp_cache
+    nullptr,                    // tp_subclasses
+    nullptr,                    // tp_weaklist
+    nullptr,                    // tp_del
+    0,                          // tp_version_tag
+    nullptr,                    // tp_finalize
+    nullptr,                    // tp_vectorcall
+    0,                          // tp_watched
+};
+
+struct order_context_object {
+    PyObject_HEAD
+    PyObject *context_holder;
+    eqbool::order_context orders;
+
+    static order_context_object *from_pyobject(PyObject *p) {
+        return reinterpret_cast<order_context_object*>(p);
+    }
+};
+
+static PyObject *order_context_register_order(PyObject *self,
+                                              PyObject *args);
+static PyObject *order_context_is_never(PyObject *self, PyObject *p);
+
+static PyMethodDef order_context_methods[] = {
+    {"_register_order", order_context_register_order, METH_VARARGS,
+     nullptr},
+    {"_is_never", order_context_is_never, METH_O, nullptr},
+    {}  // Sentinel.
+};
+
+static PyObject *order_context_new(PyTypeObject *type, PyObject *args,
+                                   PyObject *Py_UNUSED(kwds)) {
+    PyObject *context;
+    if(!PyArg_ParseTuple(args, "O!", &context_type_object, &context))
+        return nullptr;
+
+    auto *self = order_context_object::from_pyobject(
+        type->tp_alloc(type, /* nitems= */ 0));
+    if(!self)
+        return nullptr;
+
+    Py_INCREF(context);
+    self->context_holder = context;
+
+    eqbool::order_context &orders = self->orders;
+    ::new(&orders) eqbool::order_context(
+        context_object::from_pyobject(context)->context);
+
+    return &self->ob_base;
+}
+
+static void order_context_dealloc(PyObject *self) {
+    auto &object = *order_context_object::from_pyobject(self);
+    object.orders.~order_context();
+    Py_XDECREF(object.context_holder);
+    Py_TYPE(self)->tp_free(self);
+}
+
+static PyTypeObject order_context_type_object = {
+    PyVarObject_HEAD_INIT(&PyType_Type, 0)
+    "eqbool._eqbool._OrderContext",  // tp_name
+    sizeof(order_context_object),  // tp_basicsize
+    0,                          // tp_itemsize
+    order_context_dealloc,      // tp_dealloc
+    0,                          // tp_print
+    nullptr,                    // tp_getattr
+    nullptr,                    // tp_setattr
+    nullptr,                    // tp_reserved
+    nullptr,                    // tp_repr
+    nullptr,                    // tp_as_number
+    nullptr,                    // tp_as_sequence
+    nullptr,                    // tp_as_mapping
+    nullptr,                    // tp_hash
+    nullptr,                    // tp_call
+    nullptr,                    // tp_str
+    nullptr,                    // tp_getattro
+    nullptr,                    // tp_setattro
+    nullptr,                    // tp_as_buffer
+    Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE,
+                                // tp_flags
+    "OrderContext.",            // tp_doc
+    nullptr,                    // tp_traverse
+    nullptr,                    // tp_clear
+    nullptr,                    // tp_richcompare
+    0,                          // tp_weaklistoffset
+    nullptr,                    // tp_iter
+    nullptr,                    // tp_iternext
+    order_context_methods,      // tp_methods
+    nullptr,                    // tp_members
+    nullptr,                    // tp_getset
+    nullptr,                    // tp_base
+    nullptr,                    // tp_dict
+    nullptr,                    // tp_descr_get
+    nullptr,                    // tp_descr_set
+    0,                          // tp_dictoffset
+    nullptr,                    // tp_init
+    nullptr,                    // tp_alloc
+    order_context_new,          // tp_new
     nullptr,                    // tp_free
     nullptr,                    // tp_is_gc
     nullptr,                    // tp_bases
@@ -321,6 +424,28 @@ static PyObject *context_is_equiv(PyObject *self, PyObject *args) {
     Py_RETURN_FALSE;
 }
 
+static PyObject *order_context_register_order(PyObject *self,
+                                              PyObject *args) {
+    PyObject *term, *before, *after;
+    if(!PyArg_ParseTuple(args, "OOO", &term, &before, &after))
+        return nullptr;
+
+    // The sides are uniquified on the Python side.
+    auto &orders = order_context_object::from_pyobject(self)->orders;
+    orders.register_order(eqbool_from_pyobject(term),
+                          reinterpret_cast<uintptr_t>(before),
+                          reinterpret_cast<uintptr_t>(after));
+    Py_RETURN_NONE;
+}
+
+static PyObject *order_context_is_never(PyObject *self, PyObject *p) {
+    auto &orders = order_context_object::from_pyobject(self)->orders;
+    if(orders.is_never(eqbool_from_pyobject(p)))
+        Py_RETURN_TRUE;
+
+    Py_RETURN_FALSE;
+}
+
 }  // anonymous namespace
 
 PyMODINIT_FUNC PyInit__eqbool(void);
@@ -338,6 +463,18 @@ PyMODINIT_FUNC PyInit__eqbool(void) {
     if (PyModule_AddObject(m, "_Context",
                            &context_type_object.ob_base.ob_base) < 0) {
         Py_DECREF(&context_type_object);
+        Py_DECREF(m);
+        return nullptr;
+    }
+
+    if(PyType_Ready(&order_context_type_object) < 0)
+        return nullptr;
+
+    Py_INCREF(&order_context_type_object);
+
+    if (PyModule_AddObject(m, "_OrderContext",
+                           &order_context_type_object.ob_base.ob_base) < 0) {
+        Py_DECREF(&order_context_type_object);
         Py_DECREF(m);
         return nullptr;
     }

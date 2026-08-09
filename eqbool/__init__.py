@@ -3,13 +3,13 @@
 #   Testing boolean expressions for equivalence.
 #   https://github.com/kosarev/eqbool
 #
-#   Copyright (C) 2023-2025 Ivan Kosarev.
+#   Copyright (C) 2023-2026 Ivan Kosarev.
 #   mail@ivankosarev.com
 #
 #   Published under the MIT license.
 
 
-from ._eqbool import _Context
+from ._eqbool import _Context, _OrderContext
 from ._main import main
 
 import typing
@@ -229,3 +229,31 @@ class Context(_Context):
     def is_equiv(self, a: Bool, b: Bool) -> bool:
         assert all(a.context is self for a in (a, b))
         return self._is_equiv(a._p, b._p)
+
+
+class OrderContext(_OrderContext):
+    def __init__(self, context: Context) -> None:
+        self.context = context
+        self.__sides: dict[typing.Hashable, typing.Hashable] = {}
+
+    def __uniquify(self, side: typing.Hashable) -> typing.Hashable:
+        s = self.__sides.get(side)
+        if s is None:
+            s = self.__sides[side] = side
+        return s
+
+    def register_order(self, term: Bool, before: typing.Hashable,
+                       after: typing.Hashable) -> None:
+        assert term.context is self.context
+        self._register_order(term._p, self.__uniquify(before),
+                             self.__uniquify(after))
+
+    def is_never(self, e: Bool) -> bool:
+        assert e.context is self.context
+        return self._is_never(e._p)
+
+    def is_possible(self, e: Bool) -> bool:
+        return not self.is_never(e)
+
+    def is_equiv(self, a: Bool, b: Bool) -> bool:
+        return self.is_never(a ^ b)

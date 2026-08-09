@@ -44,6 +44,27 @@ def main():
     assert e1 != e2
     assert e1.id == e2.id
 
+    # Order terms are ordinary terms stating that one of two
+    # given values comes before the other; the opposite order is
+    # the negation of the same term.
+    orders = eqbool.OrderContext(ctx)
+    a_b, b_c, a_c = ctx.get('a<b'), ctx.get('b<c'), ctx.get('a<c')
+    orders.register_order(a_b, 'a', 'b')
+    orders.register_order(b_c, 'b', 'c')
+    orders.register_order(a_c, 'a', 'c')
+
+    # Orderings whose terms chain into a cycle are impossible.
+    assert orders.is_never(a_b & b_c & ~a_c)
+    assert orders.is_possible(a_b & b_c)
+
+    # Under consistent orders, spelling out the ordering implied
+    # by transitivity changes nothing...
+    assert orders.is_equiv(a_b & b_c, a_b & b_c & a_c)
+
+    # ...but as plain propositions the two expressions differ,
+    # and the order context never confuses the two views.
+    assert not ctx.is_equiv(a_b & b_c, a_b & b_c & a_c)
+
 
 if __name__ == "__main__":
     main()
