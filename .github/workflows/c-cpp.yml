@@ -1,0 +1,25 @@
+name: C/C++ CI
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4.2.2
+      with:
+        submodules: true
+    - name: cmake
+      run: cmake .
+    - name: make
+      run: make
+    - name: make test
+      run: CTEST_OUTPUT_ON_FAILURE=1 make test
+    - name: example
+      run: ./example
