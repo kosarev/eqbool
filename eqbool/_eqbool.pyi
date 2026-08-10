@@ -36,6 +36,14 @@ class _Context:
         ...
 
 
+class _EquivSession:
+    def __init__(self, context: _Context) -> None:
+        ...
+
+    def _is_equiv(self, a: int, b: int) -> bool:
+        ...
+
+
 class _OrderContext:
     def __init__(self, context: _Context) -> None:
         ...

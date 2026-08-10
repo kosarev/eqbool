@@ -25,6 +25,7 @@ namespace eqbool {
 class args_ref;
 class eqbool;
 class eqbool_context;
+class equiv_session;
 class order_context;
 
 static inline void unused(...) {}
@@ -369,6 +370,15 @@ private:
         sat_solver &solver, eqbool e,
         std::unordered_map<const node_def*, int> &literals);
 
+    // Adds the clauses defining e's cone, skipping nodes whose
+    // clauses were added under an earlier call sharing the same
+    // set of encoded nodes. e must have its literal assigned and
+    // must not be an inversion. Asserts nothing about e's value.
+    void encode_cone(
+        sat_solver &solver, eqbool e,
+        std::unordered_map<const node_def*, int> &literals,
+        std::unordered_set<const node_def*> &encoded);
+
     eqbool get_value(std::vector<eqbool> &eqs, eqbool assumed_false) const;
 
     static void add_eq(std::vector<eqbool> &eqs, eqbool e);
@@ -402,6 +412,7 @@ private:
     std::ostream &dump(std::ostream &s, args_ref nodes) const;
 
     friend eqbool;
+    friend class equiv_session;
     friend class order_context;
 
 public:
@@ -463,6 +474,35 @@ inline std::ostream &eqbool::print(std::ostream &s) const {
 inline std::ostream &operator << (std::ostream &s, eqbool e) {
     return e.print(s);
 }
+
+// Accelerates a burst of equivalence checks over overlapping
+// expressions. One solver accumulates the clauses of every cone
+// the session's checks touch, each cone encoded once, with
+// literals numbered densely within the session; a check then
+// solves under two assumptions and adds no clauses. Verdicts
+// are exactly the context's is_equiv() verdicts, and proven
+// equivalences are recorded in the context as usual -- the
+// session itself holds no semantics and can be dropped at any
+// moment, losing only speed.
+class equiv_session {
+private:
+    eqbool_context &eqbools;
+    eqbool_context::sat_solver *solver = nullptr;
+    std::unordered_map<const detail::node_def*, int> literals;
+    std::unordered_set<const detail::node_def*> encoded;
+
+    // Refuted pairs, by their ids in canonical order. Proven
+    // equivalences memoise themselves through propagation.
+    std::unordered_map<std::size_t, std::unordered_set<std::size_t>> refuted;
+
+public:
+    equiv_session(eqbool_context &eqbools) : eqbools(eqbools) {}
+    equiv_session(const equiv_session&) = delete;
+    equiv_session &operator = (const equiv_session&) = delete;
+    ~equiv_session();
+
+    bool is_equiv(eqbool a, eqbool b);
+};
 
 // Reasoning over partial orders. A registered order term is an
 // ordinary term stating that one of two opaque sides comes

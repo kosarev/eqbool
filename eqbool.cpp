@@ -560,14 +560,24 @@ class eqbool_context::sat_solver : public CaDiCaL::Solver {};
 
 void eqbool_context::add_solver_clauses(sat_solver &solver, eqbool e,
         std::unordered_map<const node_def*, int> &literals) {
+    {
+        timer t(stats.clauses_time);
+        solver.add(skip_not(e, literals));
+        solver.add(0);
+        ++stats.num_clauses;
+    }
+
+    std::unordered_set<const node_def*> encoded;
+    encode_cone(solver, e, literals, encoded);
+}
+
+void eqbool_context::encode_cone(sat_solver &solver, eqbool e,
+        std::unordered_map<const node_def*, int> &literals,
+        std::unordered_set<const node_def*> &encoded) {
     timer t(stats.clauses_time);
 
-    solver.add(skip_not(e, literals));
-    solver.add(0);
-    ++stats.num_clauses;
-
     std::vector<eqbool> worklist({e});
-    std::unordered_set<const node_def*> visited;
+    std::unordered_set<const node_def*> &visited = encoded;
     while(!worklist.empty()) {
         eqbool n = worklist.back();
         worklist.pop_back();
@@ -672,6 +682,62 @@ bool eqbool_context::is_unsat(eqbool e) {
     delete solver;
 
     return unsat;
+}
+
+equiv_session::~equiv_session() {
+    delete solver;
+}
+
+bool equiv_session::is_equiv(eqbool a, eqbool b) {
+    a.propagate();
+    b.propagate();
+    if(a == b)
+        return true;
+
+    if(!eqbool_context::fp_matches(a, b)) {
+        ++eqbools.stats.num_fp_rejects;
+        return false;
+    }
+
+    std::size_t a_id = a.get_id(), b_id = b.get_id();
+    if(a_id > b_id)
+        std::swap(a_id, b_id);
+    auto r = refuted.find(a_id);
+    if(r != refuted.end() && r->second.count(b_id) != 0)
+        return false;
+
+    // The construction-level simplifications decide most
+    // equivalent pairs without any solving.
+    eqbool eq = eqbools.get_eq(a, b);
+    if(eq.is_const()) {
+        if(!eq.is_true()) {
+            refuted[a_id].insert(b_id);
+            return false;
+        }
+        return true;
+    }
+
+    if(!solver)
+        solver = new eqbool_context::sat_solver;
+
+    eqbool neq = ~eq;
+    int neq_lit = eqbools.skip_not(neq, literals);
+    eqbools.encode_cone(*solver, neq, literals, encoded);
+
+    bool equiv;
+    {
+        timer t(eqbools.stats.sat_time);
+        solver->assume(neq_lit);
+        equiv = solver->solve() == 20;
+    }
+    ++eqbools.stats.num_sat_solutions;
+
+    if(equiv)
+        eqbools.store_equiv(a, b);
+    else
+        refuted[a_id].insert(b_id);
+
+    return equiv;
 }
 
 void eqbool_context::store_equiv(eqbool a, eqbool b) {

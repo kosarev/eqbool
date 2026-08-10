@@ -9,7 +9,7 @@
 
 import typing
 
-from ._eqbool import _Context, _OrderContext
+from ._eqbool import _Context, _EquivSession, _OrderContext
 from ._main import main as main
 
 
@@ -235,6 +235,21 @@ class Context(_Context):
 
     def is_equiv(self, a: Bool, b: Bool) -> bool:
         assert all(a.context is self for a in (a, b))
+        return self._is_equiv(a._p, b._p)
+
+
+class EquivSession(_EquivSession):
+    # Accelerates a burst of equivalence checks over overlapping
+    # expressions: cones are clause-encoded into one solver once
+    # per session, and every check is a couple of assumption
+    # solves. Verdicts are exactly the context's is_equiv()
+    # verdicts, so a session can be dropped at any moment,
+    # losing only speed.
+    def __init__(self, context: Context) -> None:
+        self.context = context
+
+    def is_equiv(self, a: Bool, b: Bool) -> bool:
+        assert all(x.context is self.context for x in (a, b))
         return self._is_equiv(a._p, b._p)
 
 
