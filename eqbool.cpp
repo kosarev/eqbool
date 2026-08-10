@@ -42,28 +42,77 @@ uint64_t splitmix64(uint64_t x) {
     return x ^ (x >> 31);
 }
 
-uint64_t compute_fp(const node_def &def) {
+}
+
+detail::fingerprint eqbool_context::fp_of(eqbool a) {
+    bool inv = a.is_inversion();
+    detail::fingerprint fp = (inv ? ~a : a).get_def().fp;
+    if(inv) {
+        for(uint64_t &w : fp.ws)
+            w = ~w;
+    }
+    return fp;
+}
+
+detail::fingerprint eqbool_context::compute_fp(const node_def &def) {
+    using detail::fingerprint;
+    fingerprint fp;
     switch(def.kind) {
-    case node_kind::term:
+    case node_kind::term: {
         // Terms take pseudo-random assignments derived from
         // their ids, so fingerprints are reproducible between
-        // runs creating nodes in the same order.
-        return splitmix64(def.id);
-    case node_kind::or_node: {
-        uint64_t fp = 0;
-        for(eqbool a : def.args)
-            fp |= a.get_fp();
+        // runs creating nodes in the same order. The words
+        // cover, in order, term-true probabilities of 1/2, 1/2,
+        // 3/4, 15/16, 63/64, 1/4, 1/16 and 1/64.
+        uint64_t r[14];
+        for(unsigned i = 0; i != 14; ++i)
+            r[i] = splitmix64(def.id * 16 + i);
+        fp.ws[0] = r[0];
+        fp.ws[1] = r[1];
+        fp.ws[2] = r[2] | r[3];
+        fp.ws[3] = fp.ws[2] | r[4] | r[5];
+        fp.ws[4] = fp.ws[3] | r[6] | r[7];
+        fp.ws[5] = r[8] & r[9];
+        fp.ws[6] = fp.ws[5] & r[10] & r[11];
+        fp.ws[7] = fp.ws[6] & r[12] & r[13];
         return fp; }
+    case node_kind::or_node:
+        for(eqbool a : def.args) {
+            fingerprint f = fp_of(a);
+            for(unsigned i = 0; i != fingerprint::num_words; ++i)
+                fp.ws[i] |= f.ws[i];
+        }
+        return fp;
     case node_kind::ifelse: {
-        uint64_t i = def.args[0].get_fp();
-        return (i & def.args[1].get_fp()) |
-               (~i & def.args[2].get_fp()); }
-    case node_kind::eq:
-        return ~(def.args[0].get_fp() ^ def.args[1].get_fp());
+        fingerprint i = fp_of(def.args[0]);
+        fingerprint t = fp_of(def.args[1]);
+        fingerprint e = fp_of(def.args[2]);
+        for(unsigned k = 0; k != fingerprint::num_words; ++k)
+            fp.ws[k] = (i.ws[k] & t.ws[k]) | (~i.ws[k] & e.ws[k]);
+        return fp; }
+    case node_kind::eq: {
+        fingerprint a = fp_of(def.args[0]);
+        fingerprint b = fp_of(def.args[1]);
+        for(unsigned k = 0; k != fingerprint::num_words; ++k)
+            fp.ws[k] = ~(a.ws[k] ^ b.ws[k]);
+        return fp; }
     }
     unreachable("unknown node kind");
 }
 
+bool eqbool_context::fp_matches(eqbool a, eqbool b) {
+    bool inv = a.is_inversion() != b.is_inversion();
+    const detail::fingerprint &fa = (a.is_inversion() ? ~a : a).get_def().fp;
+    const detail::fingerprint &fb = (b.is_inversion() ? ~b : b).get_def().fp;
+    return fa.matches(fb, inv);
+}
+
+uint64_t eqbool::get_fp() const {
+    detail::fingerprint fp = eqbool_context::fp_of(*this);
+    uint64_t h = 0;
+    for(uint64_t w : fp.ws)
+        h = splitmix64(h ^ w);
+    return h;
 }
 
 void detail::hasher::flatten_or_impl(std::vector<eqbool> &flattened,
@@ -599,8 +648,10 @@ bool eqbool_context::is_unsat(eqbool e) {
     if(e.is_const())
         return e.is_false();
 
-    // A non-zero fingerprint names satisfying assignments.
-    if(e.get_fp() != 0) {
+    // Any true bit in the fingerprint names a satisfying
+    // assignment.
+    bool inv = e.is_inversion();
+    if(!(inv ? ~e : e).get_def().fp.is_all_false(inv)) {
         ++stats.num_fp_rejects;
         return false;
     }
@@ -624,7 +675,7 @@ bool eqbool_context::is_unsat(eqbool e) {
 }
 
 void eqbool_context::store_equiv(eqbool a, eqbool b) {
-    assert(a.get_fp() == b.get_fp());
+    assert(fp_matches(a, b));
 
     // Assume that the node created earlier is the simpler one.
     if(a < b)
@@ -641,7 +692,7 @@ void eqbool_context::store_equiv(eqbool a, eqbool b) {
 bool eqbool_context::is_equiv(eqbool a, eqbool b) {
     // Differing fingerprints prove inequivalence, sparing not
     // just the solver query, but constructing an eq node for it.
-    if(a.get_fp() != b.get_fp()) {
+    if(!fp_matches(a, b)) {
         ++stats.num_fp_rejects;
         return false;
     }

@@ -71,6 +71,37 @@ constexpr uintptr_t entry_code_mask = ~(inversion_flag | lock_flag);
 
 struct node_def;
 
+// A fingerprint holds the values an expression takes under a
+// number of fixed pseudo-random assignments of the terms, one
+// per bit of its words. Equivalent expressions evaluate
+// identically under every assignment, so they always have equal
+// fingerprints. The words differ in the probability of a term
+// coming out true under their assignments: the biased families
+// tell apart expressions whose differences hide behind long
+// chains of conjunctions or disjunctions, where near-uniform
+// assignments almost never land.
+struct fingerprint {
+    static constexpr unsigned num_words = 8;
+
+    uint64_t ws[num_words] = {};
+
+    bool matches(const fingerprint &other, bool inverted) const {
+        for(unsigned i = 0; i != num_words; ++i) {
+            if(ws[i] != (inverted ? ~other.ws[i] : other.ws[i]))
+                return false;
+        }
+        return true;
+    }
+
+    bool is_all_false(bool inverted) const {
+        for(uint64_t w : ws) {
+            if((inverted ? ~w : w) != 0)
+                return false;
+        }
+        return true;
+    }
+};
+
 struct hasher {
     template <class T>
     static void hash(std::size_t &seed, const T &v) {
@@ -97,7 +128,7 @@ struct node_def {
     node_kind kind = node_kind::term;
     uintptr_t term = 0;
     std::vector<eqbool> args;
-    uint64_t fp = 0;
+    fingerprint fp;
 
     node_def(uintptr_t term, eqbool_context &context)
         : context(&context), term(term) {}
@@ -222,17 +253,10 @@ public:
                is_inversion();
     }
 
-    // The fingerprint: the values the expression takes under 64
-    // fixed pseudo-random assignments of the terms, one per bit.
-    // Equivalent expressions evaluate identically under every
-    // assignment, so differing fingerprints prove inequivalence
-    // without involving the solver.
-    uint64_t get_fp() const {
-        assert(!is_undef());
-        uintptr_t entry = entry_code & detail::entry_code_mask;
-        uint64_t fp = reinterpret_cast<node_entry*>(entry)->first.fp;
-        return is_inversion() ? ~fp : fp;
-    }
+    // A 64-bit digest of the expression's fingerprint.
+    // Equivalent expressions always have equal digests, so
+    // digests can key hashing by equivalence.
+    uint64_t get_fp() const;
 
     uintptr_t as_uintptr() const {
         return entry_code;
@@ -336,6 +360,10 @@ private:
                  std::unordered_map<const node_def*, int> &literals);
 
     class sat_solver;
+
+    static detail::fingerprint fp_of(eqbool a);
+    static detail::fingerprint compute_fp(const node_def &def);
+    static bool fp_matches(eqbool a, eqbool b);
 
     void add_solver_clauses(
         sat_solver &solver, eqbool e,
