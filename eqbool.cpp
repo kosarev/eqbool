@@ -778,105 +778,41 @@ equiv_session::pattern_words equiv_session::evaluate(eqbool e) {
     return masked(evals[&e.get_def()].bits, inv);
 }
 
-// TODO: Temporary diagnostics, to be removed.
-namespace {
-
-struct session_probe {
-    unsigned long calls = 0;
-    double t[6] = {};
-    unsigned long ends[6] = {};
-
-    void dump() const {
-        static const char *names[] = {
-            "pre", "fp", "eval", "memo", "fold", "sat"};
-        std::fprintf(stderr, "\nsession probe: %lu calls\n", calls);
-        for(unsigned i = 0; i != 6; ++i)
-            std::fprintf(stderr, "  %s: %.1fs, %lu ends\n",
-                         names[i], t[i], ends[i]);
-    }
-};
-
-session_probe g_session_probe;
-
-struct phase_timer {
-    double &total;
-    std::chrono::time_point<std::chrono::steady_clock> start =
-        std::chrono::steady_clock::now();
-
-    phase_timer(double &total) : total(total) {}
-    ~phase_timer() {
-        std::chrono::duration<double> d =
-            std::chrono::steady_clock::now() - start;
-        total += d.count();
-    }
-};
-
-}
-
 bool equiv_session::is_equiv(eqbool a, eqbool b) {
-    session_probe &pr = g_session_probe;
-    if(++pr.calls % 4000000 == 0)
-        pr.dump();
-
-    {
-        phase_timer t(pr.t[0]);
-        a.propagate();
-        b.propagate();
-    }
-    if(a == b) {
-        ++pr.ends[0];
+    a.propagate();
+    b.propagate();
+    if(a == b)
         return true;
-    }
 
-    {
-        phase_timer t(pr.t[1]);
-        if(!eqbool_context::fp_matches(a, b)) {
-            ++pr.ends[1];
-            ++eqbools.stats.num_fp_rejects;
-            return false;
-        }
+    if(!eqbool_context::fp_matches(a, b)) {
+        ++eqbools.stats.num_fp_rejects;
+        return false;
     }
 
     // The harvested patterns are assignments already known to
     // tell apart values of this burst.
-    {
-        phase_timer t(pr.t[2]);
-        if(num_patterns != 0 && evaluate(a) != evaluate(b)) {
-            ++pr.ends[2];
-            ++eqbools.stats.num_fp_rejects;
-            return false;
-        }
+    if(num_patterns != 0 && evaluate(a) != evaluate(b)) {
+        ++eqbools.stats.num_fp_rejects;
+        return false;
     }
 
     std::size_t a_id = a.get_id(), b_id = b.get_id();
     if(a_id > b_id)
         std::swap(a_id, b_id);
-    {
-        phase_timer t(pr.t[3]);
-        auto r = refuted.find(a_id);
-        if(r != refuted.end() && r->second.count(b_id) != 0) {
-            ++pr.ends[3];
-            return false;
-        }
-    }
+    auto r = refuted.find(a_id);
+    if(r != refuted.end() && r->second.count(b_id) != 0)
+        return false;
 
     // The construction-level simplifications decide most
     // equivalent pairs without any solving.
-    eqbool eq;
-    {
-        phase_timer t(pr.t[4]);
-        eq = eqbools.get_eq(a, b);
-    }
+    eqbool eq = eqbools.get_eq(a, b);
     if(eq.is_const()) {
-        ++pr.ends[4];
         if(!eq.is_true()) {
             refuted[a_id].insert(b_id);
             return false;
         }
         return true;
     }
-    phase_timer t_sat(pr.t[5]);
-    ++pr.ends[5];
 
     if(solver && literals.size() > max_solver_literals) {
         delete solver;
