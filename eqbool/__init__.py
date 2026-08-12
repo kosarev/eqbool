@@ -153,14 +153,16 @@ class Context(_Context):
         # Calls are expensive in Python, so do the simplest reductions
         # right away.
         unique_args = []
+        seen = set()
         for a in args:
             if a._value is not None:
                 if a._value is False:
                     continue
                 return self.true
-            if a._inversion in unique_args:
+            if a._inversion is not None and a._inversion in seen:
                 return self.true
-            if a not in unique_args:
+            if a not in seen:
+                seen.add(a)
                 unique_args.append(a)
 
         if len(unique_args) == 0:
@@ -168,7 +170,7 @@ class Context(_Context):
         if len(unique_args) == 1:
             return unique_args[0]
 
-        return self._make(self._get_or(*(a._p for a in args)))
+        return self._make(self._get_or(*(a._p for a in unique_args)))
 
     def get_and(self, *args: Bool) -> Bool:
         assert all(a.context is self for a in args)
@@ -176,14 +178,16 @@ class Context(_Context):
         # Calls are expensive in Python, so do the simplest reductions
         # right away.
         unique_args = []
+        seen = set()
         for a in args:
             if a._value is not None:
                 if a._value is True:
                     continue
                 return self.false
-            if a._inversion in unique_args:
+            if a._inversion is not None and a._inversion in seen:
                 return self.false
-            if a not in unique_args:
+            if a not in seen:
+                seen.add(a)
                 unique_args.append(a)
 
         if len(unique_args) == 0:
