@@ -11,6 +11,7 @@
 #ifndef EQBOOL_H
 #define EQBOOL_H
 
+#include <array>
 #include <cassert>
 #include <chrono>
 #include <cstdint>
@@ -268,6 +269,8 @@ public:
     }
 
     friend class eqbool_context;
+    friend class equiv_session;
+    friend class order_context;
     friend struct detail::hasher;
 
     eqbool() = default;
@@ -476,24 +479,57 @@ inline std::ostream &operator << (std::ostream &s, eqbool e) {
 }
 
 // Accelerates a burst of equivalence checks over overlapping
-// expressions. One solver accumulates the clauses of every cone
-// the session's checks touch, each cone encoded once, with
-// literals numbered densely within the session; a check then
-// solves under two assumptions and adds no clauses. Verdicts
-// are exactly the context's is_equiv() verdicts, and proven
-// equivalences are recorded in the context as usual -- the
-// session itself holds no semantics and can be dropped at any
-// moment, losing only speed.
+// expressions. Every refutation's solver model is harvested as
+// a distinguishing pattern -- an assignment of the terms on
+// which the refuted pair differs -- and evaluating both sides
+// of a later check under the stored patterns refutes most
+// sibling pairs by a word compare, so the solver runs about
+// once per class of equivalent expressions rather than once
+// per pair. Verdicts are exactly the context's is_equiv()
+// verdicts, and proven equivalences are recorded in the
+// context as usual -- the session itself holds no semantics
+// and can be dropped at any moment, losing only speed.
 class equiv_session {
 private:
+    static constexpr unsigned max_patterns = 256;
+    static constexpr unsigned num_pattern_words = max_patterns / 64;
+
+    using pattern_words = std::array<uint64_t, num_pattern_words>;
+
     eqbool_context &eqbools;
-    eqbool_context::sat_solver *solver = nullptr;
-    std::unordered_map<const detail::node_def*, int> literals;
-    std::unordered_set<const detail::node_def*> encoded;
+
+    // The values terms take under the harvested patterns, one
+    // bit per pattern. Terms a pattern's model says nothing
+    // about are false under it.
+    std::unordered_map<const detail::node_def*, pattern_words> pattern_bits;
+    unsigned num_patterns = 0;
+
+    // Nodes' evaluations under the patterns, valid while the
+    // pattern count matches.
+    struct evaluations {
+        pattern_words bits;
+        unsigned num_patterns;
+    };
+    std::unordered_map<const detail::node_def*, evaluations> evals;
 
     // Refuted pairs, by their ids in canonical order. Proven
     // equivalences memoise themselves through propagation.
     std::unordered_map<std::size_t, std::unordered_set<std::size_t>> refuted;
+
+    // The solver is shared between checks, so overlapping cones
+    // encode once, with literals numbered densely within the
+    // solver's lifetime. It is retired once it grows to the
+    // point where accumulated clauses, learned clauses and
+    // heuristic state would start hurting: bounded incarnations
+    // keep the sharing without the pathology of one solver
+    // carrying a whole burst.
+    static constexpr std::size_t max_solver_literals = 50000;
+
+    eqbool_context::sat_solver *solver = nullptr;
+    std::unordered_map<const detail::node_def*, int> literals;
+    std::unordered_set<const detail::node_def*> encoded;
+
+    pattern_words evaluate(eqbool e);
 
 public:
     equiv_session(eqbool_context &eqbools) : eqbools(eqbools) {}
@@ -522,6 +558,39 @@ private:
 
     // Registered order terms, by their term values.
     std::unordered_map<uintptr_t, sides> order_terms;
+
+    // Sides numbered in the order of registration, so sampled
+    // priorities are reproducible between runs registering
+    // sides in the same order.
+    std::unordered_map<uintptr_t, std::size_t> side_ids;
+
+    // The values nodes take under 64 assignments, each drawn
+    // from a total order of the sides, so the assignments are
+    // transitively consistent by construction, and any true bit
+    // of an expression's evaluation names a consistent order
+    // satisfying it -- a possible verdict with no solving.
+    // The orders are harvested from the solver's own consistent
+    // models, extended to total orders over the sides they
+    // mention: random orders almost never satisfy conditions
+    // conjoining many order facts, but an order that satisfied
+    // one such condition tends to decide its whole family.
+    // Columns not harvested yet, and sides a column does not
+    // rank, follow the side registration order. Other terms
+    // take pseudo-random values.
+    struct evaluations {
+        uint64_t bits;
+        unsigned num_columns;
+    };
+    std::unordered_map<const detail::node_def*, evaluations> sample_evals;
+
+    // Per harvested column, the sides' ranks in the total
+    // order, indexed by the sides' registration numbers; sides
+    // the column's model does not mention, including sides
+    // registered after the harvest, rank last, in registration
+    // order.
+    std::vector<std::vector<std::size_t>> column_ranks;
+
+    uint64_t evaluate_samples(eqbool e);
 
     // Memoised is_never() verdicts, keyed by eqbool identity --
     // get_id(), which includes the inversion.

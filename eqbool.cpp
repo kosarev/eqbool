@@ -684,39 +684,206 @@ bool eqbool_context::is_unsat(eqbool e) {
     return unsat;
 }
 
-equiv_session::~equiv_session() {
-    delete solver;
+equiv_session::pattern_words equiv_session::evaluate(eqbool e) {
+    e.propagate();
+    bool inv = e.is_inversion();
+    if(inv)
+        e = ~e;
+
+    pattern_words mask = {};
+    for(unsigned j = 0; j != num_patterns; ++j)
+        mask[j / 64] |= uint64_t(1) << (j % 64);
+
+    auto masked = [&mask](pattern_words w, bool invert) {
+        for(unsigned k = 0; k != num_pattern_words; ++k)
+            w[k] = (invert ? ~w[k] : w[k]) & mask[k];
+        return w;
+    };
+
+    std::vector<eqbool> worklist({e});
+    while(!worklist.empty()) {
+        eqbool n = worklist.back();
+        const node_def &def = n.get_def();
+        auto it = evals.find(&def);
+        if(it != evals.end() && it->second.num_patterns == num_patterns) {
+            worklist.pop_back();
+            continue;
+        }
+
+        if(def.kind == node_kind::term) {
+            auto p = pattern_bits.find(&def);
+            pattern_words bits =
+                p == pattern_bits.end() ? pattern_words{} : p->second;
+            evals[&def] = {bits, num_patterns};
+            worklist.pop_back();
+            continue;
+        }
+
+        auto get_arg_bits = [this, &masked](eqbool a) {
+            a.propagate();
+            bool a_inv = a.is_inversion();
+            if(a_inv)
+                a = ~a;
+            auto i = evals.find(&a.get_def());
+            assert(i != evals.end() &&
+                   i->second.num_patterns == num_patterns);
+            return masked(i->second.bits, a_inv);
+        };
+
+        // Make sure the args are evaluated first.
+        bool ready = true;
+        for(eqbool a : def.args) {
+            a.propagate();
+            if(a.is_inversion())
+                a = ~a;
+            auto i = evals.find(&a.get_def());
+            if(i == evals.end() || i->second.num_patterns != num_patterns) {
+                worklist.push_back(a);
+                ready = false;
+            }
+        }
+        if(!ready)
+            continue;
+
+        pattern_words bits = {};
+        switch(def.kind) {
+        case node_kind::term:
+            unreachable("terms are evaluated directly");
+        case node_kind::or_node:
+            for(eqbool a : def.args) {
+                pattern_words w = get_arg_bits(a);
+                for(unsigned k = 0; k != num_pattern_words; ++k)
+                    bits[k] |= w[k];
+            }
+            break;
+        case node_kind::ifelse: {
+            pattern_words i = get_arg_bits(def.args[0]);
+            pattern_words t = get_arg_bits(def.args[1]);
+            pattern_words e_bits = get_arg_bits(def.args[2]);
+            for(unsigned k = 0; k != num_pattern_words; ++k)
+                bits[k] = (i[k] & t[k]) | (~i[k] & e_bits[k]);
+            break; }
+        case node_kind::eq: {
+            pattern_words p = get_arg_bits(def.args[0]);
+            pattern_words q = get_arg_bits(def.args[1]);
+            for(unsigned k = 0; k != num_pattern_words; ++k)
+                bits[k] = ~(p[k] ^ q[k]);
+            break; }
+        }
+
+        evals[&def] = {masked(bits, false), num_patterns};
+        worklist.pop_back();
+    }
+
+    return masked(evals[&e.get_def()].bits, inv);
+}
+
+// TODO: Temporary diagnostics, to be removed.
+namespace {
+
+struct session_probe {
+    unsigned long calls = 0;
+    double t[6] = {};
+    unsigned long ends[6] = {};
+
+    void dump() const {
+        static const char *names[] = {
+            "pre", "fp", "eval", "memo", "fold", "sat"};
+        std::fprintf(stderr, "\nsession probe: %lu calls\n", calls);
+        for(unsigned i = 0; i != 6; ++i)
+            std::fprintf(stderr, "  %s: %.1fs, %lu ends\n",
+                         names[i], t[i], ends[i]);
+    }
+};
+
+session_probe g_session_probe;
+
+struct phase_timer {
+    double &total;
+    std::chrono::time_point<std::chrono::steady_clock> start =
+        std::chrono::steady_clock::now();
+
+    phase_timer(double &total) : total(total) {}
+    ~phase_timer() {
+        std::chrono::duration<double> d =
+            std::chrono::steady_clock::now() - start;
+        total += d.count();
+    }
+};
+
 }
 
 bool equiv_session::is_equiv(eqbool a, eqbool b) {
-    a.propagate();
-    b.propagate();
-    if(a == b)
-        return true;
+    session_probe &pr = g_session_probe;
+    if(++pr.calls % 4000000 == 0)
+        pr.dump();
 
-    if(!eqbool_context::fp_matches(a, b)) {
-        ++eqbools.stats.num_fp_rejects;
-        return false;
+    {
+        phase_timer t(pr.t[0]);
+        a.propagate();
+        b.propagate();
+    }
+    if(a == b) {
+        ++pr.ends[0];
+        return true;
+    }
+
+    {
+        phase_timer t(pr.t[1]);
+        if(!eqbool_context::fp_matches(a, b)) {
+            ++pr.ends[1];
+            ++eqbools.stats.num_fp_rejects;
+            return false;
+        }
+    }
+
+    // The harvested patterns are assignments already known to
+    // tell apart values of this burst.
+    {
+        phase_timer t(pr.t[2]);
+        if(num_patterns != 0 && evaluate(a) != evaluate(b)) {
+            ++pr.ends[2];
+            ++eqbools.stats.num_fp_rejects;
+            return false;
+        }
     }
 
     std::size_t a_id = a.get_id(), b_id = b.get_id();
     if(a_id > b_id)
         std::swap(a_id, b_id);
-    auto r = refuted.find(a_id);
-    if(r != refuted.end() && r->second.count(b_id) != 0)
-        return false;
+    {
+        phase_timer t(pr.t[3]);
+        auto r = refuted.find(a_id);
+        if(r != refuted.end() && r->second.count(b_id) != 0) {
+            ++pr.ends[3];
+            return false;
+        }
+    }
 
     // The construction-level simplifications decide most
     // equivalent pairs without any solving.
-    eqbool eq = eqbools.get_eq(a, b);
+    eqbool eq;
+    {
+        phase_timer t(pr.t[4]);
+        eq = eqbools.get_eq(a, b);
+    }
     if(eq.is_const()) {
+        ++pr.ends[4];
         if(!eq.is_true()) {
             refuted[a_id].insert(b_id);
             return false;
         }
         return true;
     }
+    phase_timer t_sat(pr.t[5]);
+    ++pr.ends[5];
 
+    if(solver && literals.size() > max_solver_literals) {
+        delete solver;
+        solver = nullptr;
+        literals.clear();
+        encoded.clear();
+    }
     if(!solver)
         solver = new eqbool_context::sat_solver;
 
@@ -732,12 +899,31 @@ bool equiv_session::is_equiv(eqbool a, eqbool b) {
     }
     ++eqbools.stats.num_sat_solutions;
 
-    if(equiv)
+    if(equiv) {
         eqbools.store_equiv(a, b);
-    else
+    } else {
+        // Harvest the model as a new pattern: an assignment on
+        // which the pair differs, and so likely one telling
+        // apart their whole families in later checks.
+        if(num_patterns != max_patterns) {
+            for(const auto &p : literals) {
+                const node_def &def = *p.first;
+                if(def.kind != node_kind::term)
+                    continue;
+                if(solver->val(p.second) > 0)
+                    pattern_bits[&def][num_patterns / 64] |=
+                        uint64_t(1) << (num_patterns % 64);
+            }
+            ++num_patterns;
+        }
         refuted[a_id].insert(b_id);
+    }
 
     return equiv;
+}
+
+equiv_session::~equiv_session() {
+    delete solver;
 }
 
 void eqbool_context::store_equiv(eqbool a, eqbool b) {
@@ -955,6 +1141,117 @@ void order_context::register_order(eqbool term, uintptr_t before,
     assert(r.second || (r.first->second.before == before &&
                         r.first->second.after == after));
     unused(&r);
+
+    side_ids.insert({before, side_ids.size()});
+    side_ids.insert({after, side_ids.size()});
+}
+
+uint64_t order_context::evaluate_samples(eqbool e) {
+    e.propagate();
+    bool inv = e.is_inversion();
+    if(inv)
+        e = ~e;
+
+    unsigned num_columns = static_cast<unsigned>(column_ranks.size());
+
+    // The rank of a side in the total order of the given
+    // column; sides the column does not rank come last, in
+    // registration order.
+    auto get_rank = [this](unsigned j, std::size_t side) {
+        if(j >= column_ranks.size())
+            return SIZE_MAX;
+        const std::vector<std::size_t> &ranks = column_ranks[j];
+        return side < ranks.size() ? ranks[side] : SIZE_MAX;
+    };
+
+    std::vector<eqbool> worklist({e});
+    while(!worklist.empty()) {
+        eqbool n = worklist.back();
+        const detail::node_def &def = n.get_def();
+        auto it = sample_evals.find(&def);
+        if(it != sample_evals.end() &&
+               it->second.num_columns == num_columns) {
+            worklist.pop_back();
+            continue;
+        }
+
+        if(def.kind == node_kind::term) {
+            uint64_t bits;
+            auto t = order_terms.find(def.term);
+            if(t == order_terms.end()) {
+                // Not an order term; assignments are free to
+                // give it pseudo-random values.
+                bits = splitmix64(def.id ^ 0x0dd5a317e5u);
+            } else {
+                std::size_t b = side_ids.find(t->second.before)->second;
+                std::size_t a = side_ids.find(t->second.after)->second;
+                bits = 0;
+                for(unsigned j = 0; j != 64; ++j) {
+                    std::size_t rb = get_rank(j, b);
+                    std::size_t ra = get_rank(j, a);
+                    if(rb < ra || (rb == ra && b < a))
+                        bits |= uint64_t(1) << j;
+                }
+            }
+            sample_evals[&def] = {bits, num_columns};
+            worklist.pop_back();
+            continue;
+        }
+
+        auto get_arg_bits = [this, num_columns](eqbool arg) {
+            arg.propagate();
+            bool arg_inv = arg.is_inversion();
+            if(arg_inv)
+                arg = ~arg;
+            auto i = sample_evals.find(&arg.get_def());
+            assert(i != sample_evals.end() &&
+                   i->second.num_columns == num_columns);
+            unused(num_columns);
+            return arg_inv ? ~i->second.bits : i->second.bits;
+        };
+
+        // Make sure the args are evaluated first.
+        bool ready = true;
+        for(eqbool a : def.args) {
+            a.propagate();
+            if(a.is_inversion())
+                a = ~a;
+            auto i = sample_evals.find(&a.get_def());
+            if(i == sample_evals.end() ||
+                   i->second.num_columns != num_columns) {
+                worklist.push_back(a);
+                ready = false;
+            }
+        }
+        if(!ready)
+            continue;
+
+        uint64_t bits = 0;
+        switch(def.kind) {
+        case node_kind::term:
+            unreachable("terms are evaluated directly");
+        case node_kind::or_node:
+            for(eqbool a : def.args)
+                bits |= get_arg_bits(a);
+            break;
+        case node_kind::ifelse: {
+            uint64_t i = get_arg_bits(def.args[0]);
+            uint64_t t = get_arg_bits(def.args[1]);
+            uint64_t e_bits = get_arg_bits(def.args[2]);
+            bits = (i & t) | (~i & e_bits);
+            break; }
+        case node_kind::eq:
+            bits = ~(get_arg_bits(def.args[0]) ^
+                     get_arg_bits(def.args[1]));
+            break;
+        }
+
+        sample_evals[&def] = {bits, num_columns};
+        worklist.pop_back();
+    }
+
+    uint64_t bits = sample_evals[&e.get_def()].bits;
+    return inv ? ~bits : bits;
 }
 
 bool order_context::is_never_impl(eqbool e) {
@@ -1049,6 +1346,49 @@ bool order_context::is_never_impl(eqbool e) {
 
         if(cycle_lits.empty()) {
             // A consistent order satisfies the expression.
+            // Harvest it for evaluate_samples(): extended to a
+            // total order over the sides it mentions, it can
+            // prove possible verdicts for related expressions
+            // with no solving.
+            if(column_ranks.size() != 64) {
+                // Reverse post-order over the model's edges is
+                // a topological order; the graph is acyclic
+                // here.
+                std::vector<uintptr_t> postorder;
+                std::unordered_map<uintptr_t, bool> visited;
+                for(const auto &p : edges) {
+                    if(visited[p.first])
+                        continue;
+                    visited[p.first] = true;
+                    std::vector<std::pair<uintptr_t, std::size_t>> path(
+                        {{p.first, 0}});
+                    while(!path.empty()) {
+                        auto &f = path.back();
+                        auto it = edges.find(f.first);
+                        if(it == edges.end() ||
+                               f.second >= it->second.size()) {
+                            postorder.push_back(f.first);
+                            path.pop_back();
+                            continue;
+                        }
+                        uintptr_t to = it->second[f.second++].to;
+                        if(!visited[to]) {
+                            visited[to] = true;
+                            path.push_back({to, 0});
+                        }
+                    }
+                }
+
+                std::vector<std::size_t> ranks(side_ids.size(), SIZE_MAX);
+                std::size_t rank = 0;
+                for(auto i = postorder.rbegin();
+                        i != postorder.rend(); ++i) {
+                    auto s = side_ids.find(*i);
+                    assert(s != side_ids.end());
+                    ranks[s->second] = rank++;
+                }
+                column_ranks.push_back(std::move(ranks));
+            }
             break;
         }
 
@@ -1075,7 +1415,13 @@ bool order_context::is_never(eqbool e) {
     if(it != is_never_cache.end())
         return it->second;
 
-    bool never = is_never_impl(e);
+    // A true sampled bit names a consistent order satisfying
+    // the expression.
+    bool never;
+    if(evaluate_samples(e) != 0)
+        never = false;
+    else
+        never = is_never_impl(e);
     is_never_cache[key] = never;
     return never;
 }
