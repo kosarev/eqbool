@@ -1191,16 +1191,24 @@ uint64_t order_context::evaluate_samples(eqbool e) {
 }
 
 bool order_context::is_never_impl(eqbool e) {
-    auto *solver = new eqbool_context::sat_solver;
+    if(solver && literals.size() > max_solver_literals) {
+        delete solver;
+        solver = nullptr;
+        literals.clear();
+        encoded.clear();
+    }
+    if(!solver)
+        solver = new eqbool_context::sat_solver;
 
-    std::unordered_map<const detail::node_def*, int> literals;
-    eqbools.add_solver_clauses(*solver, e, literals);
+    int e_lit = eqbools.skip_not(e, literals);
+    eqbools.encode_cone(*solver, e, literals, encoded);
 
     bool never = false;
     for(;;) {
         int res;
         {
             timer t(eqbools.stats.sat_time);
+            solver->assume(e_lit);
             res = solver->solve();
         }
         ++eqbools.stats.num_sat_solutions;
@@ -1335,9 +1343,11 @@ bool order_context::is_never_impl(eqbool e) {
         ++eqbools.stats.num_clauses;
     }
 
-    delete solver;
-
     return never;
+}
+
+order_context::~order_context() {
+    delete solver;
 }
 
 bool order_context::is_never(eqbool e) {

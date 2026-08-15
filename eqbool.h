@@ -596,10 +596,26 @@ private:
     // get_id(), which includes the inversion.
     std::unordered_map<std::size_t, bool> is_never_cache;
 
+    // The solver is shared between queries the same way the
+    // equivalence session's is: overlapping cones encode once,
+    // each query solves under an assumption, and the solver
+    // retires at the literal cap. Cycle-blocking clauses are
+    // facts about the sides alone, so sharing keeps them
+    // learned across queries instead of rediscovering the same
+    // cycles per query.
+    static constexpr std::size_t max_solver_literals = 50000;
+
+    eqbool_context::sat_solver *solver = nullptr;
+    std::unordered_map<const detail::node_def*, int> literals;
+    std::unordered_set<const detail::node_def*> encoded;
+
     bool is_never_impl(eqbool e);
 
 public:
     order_context(eqbool_context &eqbools) : eqbools(eqbools) {}
+    order_context(const order_context&) = delete;
+    order_context &operator = (const order_context&) = delete;
+    ~order_context();
 
     void register_order(eqbool term, uintptr_t before, uintptr_t after);
 
